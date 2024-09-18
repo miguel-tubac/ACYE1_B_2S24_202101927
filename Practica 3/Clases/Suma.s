@@ -49,10 +49,16 @@
         .space 12
     newline:
         .ascii "\n"
+    opracionCom:
+        .space 50
 
     erronea:
         .asciz "\nOpción no válida, intenta de nuevo..."
         lenErronea = . - erronea
+    
+    completoSuma:
+        .asciz "\nIngrese la operación completa: "
+        lenCompleto = . - completoSuma
 
 .bss
     opcion:
@@ -124,6 +130,7 @@ do_sum:
 
         sumaOperaCompleta:
             print sumaOpera, lenRestaText
+            beq operacion_completa
             b cont
 
         sumaOperaComas:
@@ -212,45 +219,166 @@ do_sum:
 
 
 
-   /* // Función para convertir una cadena ASCII a entero
-    // Función atoi: convierte cadena a entero
-    atoi:
-        mov w1, 0         // resultado
-    atoi_loop:
-        ldrb w2, [x0], 1  // cargar byte y avanzar
-        sub w2, w2, '0'   // convertir a número
-        cmp w2, 9         // verificar si es número
-        bhi atoi_end      // si no es, salimos
-        mov w3, 10        // multiplicador
-        mul w1, w1, w3    // multiplicar resultado por 10
-        add w1, w1, w2    // sumar dígito
-        b atoi_loop       // repetir
-    atoi_end:
-        mov w0, w1        // mover resultado a w0
-        ret               // retornar*/
 
-    // Función itoa: convierte entero a cadena
+
+
+    operacion_completa:
+        // Imprimir el primer mensaje
+        mov x0, 1              // Descriptor de archivo para stdout
+        ldr x1, =completoSuma  // Dirección del mensaje
+        mov x2, lenCompleto    // Longitud del mensaje
+        mov x8, 64             // Número de llamada al sistema para write
+        svc 0                  // Llamada al sistema
+
+        // Leer la operación completa
+        mov x0, 0              // Descriptor de archivo para stdin
+        ldr x1, =opracionCom   // Dirección del buffer
+        mov x2, 50             // Longitud del buffer
+        mov x8, 63             // Número de llamada al sistema para read
+        svc 0                  // Llamada al sistema
+
+        // Procesar la cadena de operación
+        ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
+        bl find_operator       // Encontrar el operador '+' y dividir la cadena
+
+        // Convertir números a enteros
+        ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
+        bl atoi                // Convertir la primera parte a entero (primer número)
+        mov w5, w0             // Guardar el primer número en w5
+
+        // Encontrar el operador '+' y convertir el segundo número
+        ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
+        bl atoi                // Convertir la segunda parte a entero (segundo número)
+        mov w6, w0             // Guardar el segundo número en w6
+
+        // Sumar los dos números
+        add w7, w5, w6         // w7 = w5 + w6
+
+        // Convertir resultado a cadena (itoa)
+        mov w0, w7             // Cargar resultado
+        ldr x1, =result        // Cargar dirección de resultado
+        bl itoa                // Llamar a itoa
+
+        // Mostrar mensaje
+        mov x0, 1              // Descriptor de archivo para stdout
+        ldr x1, =result_msg    // Dirección del mensaje
+        mov x2, lenResult      // Tamaño del mensaje
+        mov x8, 64             // Número de llamada al sistema para write
+        svc 0                  // Llamada al sistema
+
+        // Mostrar resultado
+        mov x0, 1              // Descriptor de archivo para stdout
+        ldr x1, =result        // Dirección del resultado
+        mov x2, 12             // Tamaño del resultado
+        mov x8, 64             // Número de llamada al sistema para write
+        svc 0                  // Llamada al sistema
+
+        // Mostrar nueva línea
+        mov x0, 1              // Descriptor de archivo para stdout
+        ldr x1, =newline       // Dirección de nueva línea
+        mov x2, 1              // Tamaño de nueva línea
+        mov x8, 64             // Número de llamada al sistema para write
+        svc 0                  // Llamada al sistema
+
+        // Reiniciar variables
+        b reiniciar_variables
+
+    // Función para encontrar el operador '+' y dividir la cadena
+    find_operator:
+        ldr x2, =opracionCom   // Cargar dirección de la cadena de operación
+        mov x1, 0              // Inicializar el puntero del segundo número
+    find_loop:
+        ldrb w3, [x2], 1      // Cargar un carácter de la cadena
+        cmp w3, '+'            // Comparar con el operador '+'
+        beq found_plus         // Si es '+', proceder
+        cbnz w3, find_loop     // Repetir hasta encontrar '+'
+
+    found_plus:
+        ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
+        add x2, x2, -1         // Retroceder un carácter para el siguiente número
+        strb wzr, [x2]        // Colocar un terminador nulo después del '+'
+
+        ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
+        bl atoi                // Convertir la primera parte de la cadena a entero
+        mov w5, w0             // Guardar el primer número en w5
+
+        ldr x0, =opracionCom   // Cargar dirección de la segunda parte de la cadena
+        add x0, x0, 1          // Mover dirección al siguiente carácter después del '+'
+        bl atoi                // Convertir el segundo número de la cadena a entero
+        mov w6, w0             // Guardar el segundo número en w6
+
+        ret
+
+
+
+
+
+
+
+
+
+
+    // Función itoa: convierte entero a cadena con la validacion de los negativos
     itoa:
-        mov w2, 10        // base 10
-        add x1, x1, 11    // mover puntero al final
-        strb wzr, [x1]    // agregar terminador nulo
+        cmp w0, #0           // Comparar el número con 0
+        bge itoa_positive     // Si es mayor o igual a 0, continuar con la conversión normal
+        
+        // Manejar número negativo
+        neg w0, w0            // Convertir el número a positivo
+        mov w3, '-'           // Colocar el signo negativo
+        sub x1, x1, 1         // Retroceder puntero
+        strb w3, [x1]         // Almacenar el signo negativo
+
+    itoa_positive:
+        mov w2, 10            // Base 10
+        add x1, x1, 11        // Mover puntero al final
+        strb wzr, [x1]        // Agregar terminador nulo
+
     itoa_loop:
-        udiv w3, w0, w2   // dividir número por 10
-        msub w4, w3, w2, w0 // obtener residuo
-        add w4, w4, '0'   // convertir a carácter
-        sub x1, x1, 1     // retroceder puntero
-        strb w4, [x1]     // almacenar carácter
-        mov w0, w3        // actualizar número
-        cbnz w0, itoa_loop// repetir mientras no sea cero
-        ret               // retornar
+        udiv w3, w0, w2       // Dividir número por 10
+        msub w4, w3, w2, w0   // Obtener residuo
+        add w4, w4, '0'       // Convertir residuo a carácter
+        sub x1, x1, 1         // Retroceder puntero
+        strb w4, [x1]         // Almacenar carácter
+        mov w0, w3            // Actualizar número
+        cbnz w0, itoa_loop    // Repetir mientras no sea 0
+        ret                   // Retornar
 
 
+    // Función para convertir una cadena ASCII a entero con la validacion de signos
+    atoi:
+        mov w1, 0          // Inicializar el resultado
+        mov w2, 0          // Inicializar signo (0 = positivo, 1 = negativo)
 
+        ldrb w3, [x0], 1   // Cargar el primer carácter
+        cmp w3, '-'        // Comparar con el carácter '-'
+        bne check_digit    // Si no es '-', continuar con la conversión normal
+        mov w2, 1          // Marcar el número como negativo
+        ldrb w3, [x0], 1   // Avanzar al siguiente carácter después del signo
 
+    check_digit:
+        sub w3, w3, '0'    // Convertir el carácter a número
+        cmp w3, 9          // Verificar si es un número válido (0-9)
+        bhi atoi_end       // Si no es un número, finalizar
 
+    atoi_loop:
+        mov w4, 10         // Cargar el valor 10 en w4 para multiplicar
+        mul w1, w1, w4     // Multiplicar el resultado actual por 10
+        add w1, w1, w3     // Sumar el dígito actual al resultado
 
+        ldrb w3, [x0], 1   // Cargar el siguiente byte
+        sub w3, w3, '0'    // Convertir carácter a número
+        cmp w3, 9          // Verificar si es número válido
+        bls atoi_loop      // Si es un número, repetir
 
+    atoi_end:
+        cmp w2, 1          // Comprobar si el número era negativo
+        bne atoi_finish    // Si no es negativo, finalizar
+        neg w1, w1         // Si es negativo, cambiar el signo
 
+    atoi_finish:
+        mov w0, w1         // Devolver el resultado en w0
+        ret                // Retornar el valor
 
 
 
