@@ -1,96 +1,157 @@
 .global _start
 .extern do_sum  // Declaramos la función externa que está en sum.S
-//.extern print_number
 
-.section .data
-    message1: .asciz "\nUniversidad de San Carlos de Guatemala\nFacultad de Ingenieria\nEscuela de Ciencias y Sistemas\nArquitectura de Computadores y Ensambladores 1\nSeccion B\nMiguel Adrian Tubac Agustin\n202101927\n\nPresione Enter para continuar...\n"
-    menu: .asciz "\nMenu:\n1. Suma\n2. Resta\n3. Multiplicacion\n4. Division\n5. Calculo con memoria\n6. Finalizar calculadora\n"
-    newline: .asciz "\n"
-    prompt: .asciz "\nIngrese una Opción: "
-    invalid_option: .asciz "\nOpción no válida, intenta de nuevo...\n"
-    option1: .asciz "1"
-    option6: .asciz "6"
+.data
+    clear:
+        .asciz "\x1B[2J\x1B[H"
+        lenClear = . - clear
 
-.section .bss
-    .lcomm buffer, 256  // Buffer para la entrada del usuario
+    encabezado:
+        .asciz "Universidad De San Carlos De Guatemala\n"
+        .asciz "Facultad De Ingenieria\n"
+        .asciz "Escuela de Ciencias y Sistemas\n"
+        .asciz "Arquitectura de Computadores y Ensambladores 1\n"
+        .asciz "Seccion B\n"
+        .asciz "Miguel Adrian Tubac Agustin\n"
+        .asciz "202101927\n"
+        .asciz "\n"
+        .asciz "Presione Enter para continuar..."
+        lenEncabezado = . - encabezado
 
-.section .text
+    menuPrincipal:
+        .asciz ">>>> Menu Principal <<<<\n"
+        .asciz "1. Suma\n"
+        .asciz "2. Resta\n"
+        .asciz "3. Multiplicacion\n"
+        .asciz "4. Division\n"
+        .asciz "5. Calculo Con Memoria\n"
+        .asciz "6. Finalizar calculadora\n"
+        lenMenuPrincipal = .- menuPrincipal
+
+    msgOpcion:
+        .asciz "Ingrese Una Opcion: "
+        lenOpcion = .- msgOpcion
+
+    sumaText:
+        .asciz "Ingresando Suma\n"
+        lenSumaText = . - sumaText
+
+    restaText:
+        .asciz "Ingresando Resta\n"
+        lenRestaText = . - restaText
+
+    multiplicacionText:
+        .asciz "Ingresando Multiplicacion\n"
+        lenMultiplicacionText = . - multiplicacionText
+
+    divisionText:
+        .asciz "Ingresando Division\n"
+        lenDivisionText = . - divisionText
+
+    operacionesText:
+        .asciz "Ingresando Operaciones\n"
+        lenOperacionesText = . - operacionesText
+
+    erronea:
+        .asciz "\nOpción no válida, intenta de nuevo..."
+        lenErronea = . - erronea
+
+.bss
+    opcion:
+        .space 5   // => El 5 indica cuantos BYTES se reservaran para la variable opcion
+
+.macro print texto, cantidad
+    MOV x0, 1
+    LDR x1, =\texto
+    LDR x2, =\cantidad
+    MOV x8, 64
+    SVC 0 
+.endm
+
+.macro input
+    MOV x0, 0
+    LDR x1, =opcion
+    LDR x2, =5
+    MOV x8, 63
+    SVC 0
+.endm
+
+
+.text
 _start:
-    // Mostrar el mensaje de bienvenida
-    mov x0, 1               // File descriptor para stdout
-    ldr x1, =message1       // Dirección del mensaje
-    mov x2, #222            // Longitud del mensaje
-    mov x8, #64             // syscall write
-    svc 0
+    // Colocar el codigo ARM
+    print clear, lenClear
+    print encabezado, lenEncabezado
+    input
 
-    // Esperar a que el usuario presione Enter
-    mov x0, 0               // File descriptor para stdin
-    ldr x1, =buffer         // Dirección del buffer
-    mov x2, #1              // Leer 1 byte (Enter)
-    mov x8, #63             // syscall read
-    svc 0
+    menu:
+        print clear, lenClear
+        print menuPrincipal, lenMenuPrincipal
+        print msgOpcion, lenOpcion
+        input
 
-menu_loop:
-    // Mostrar el menú
-    mov x0, 1               // File descriptor para stdout
-    ldr x1, =menu           // Dirección del menú
-    mov x2, #102            // Longitud del menú
-    mov x8, #64             // syscall write
-    svc 0
+        LDR x10, =opcion
+        LDRB w10, [x10]
 
-    // Mostrar prompt para opción
-    mov x0, 1               // File descriptor para stdout
-    ldr x1, =prompt         // Dirección del prompt
-    mov x2, #22              // Longitud del prompt
-    mov x8, #64             // syscall write
-    svc 0
+        cmp w10, 49
+        beq suma
 
-    // Leer la opción seleccionada
-    mov x0, 0               // File descriptor para stdin
-    ldr x1, =buffer         // Dirección del buffer
-    mov x2, #4              // Leer 1 byte (la opción)
-    mov x8, #63             // syscall read
-    svc 0
+        cmp w10, 50
+        beq resta
 
-    // Comparar la opción ingresada con '6'
-    ldrb w0, [x1]           // Cargar el valor de la opción (byte)
-    cmp w0, #'6'            // Comparar con '6'
-    beq exit_program        // Si es '6', salir del ciclo y terminar
+        cmp w10, 51
+        beq multiplicacion
 
-    // Comparar la opción con '1' para la suma
-    cmp w0, #'1'            // Comparar con '1'
-    beq call_sum            // Si es '1', llamar a la función de suma
+        cmp w10, 52
+        beq division
 
-    // Validar si es una opción válida entre '1' y '5'
-    cmp w0, #'1'            // Comparar con '1'
-    blt invalid_choice      // Si es menor que '1', opción inválida
-    cmp w0, #'6'            // Comparar con '6'
-    bgt invalid_choice      // Si es mayor que '6', opción inválida
-    
-    // Si es una opción válida, repetir el ciclo
-    b menu_loop
+        cmp w10, 53
+        beq operacion_memoria
+
+        cmp w10, 54
+        beq end
+
+        b invalido
+
+        invalido:
+            print erronea, lenErronea
+            B cont
+
+        suma:
+            print sumaText, lenSumaText
+            // Pedir numeros de entrada
+            // replicar el funcionamiendo de atoi(ASCII TO INTEGER)[Funcion de C]
+            // realizar operacion
+            // replicar el funcionamiento de itoa(INTEGER TO ASCII)[Funcion de C]
+            bl do_sum               // Llamar a la función do_sum (en sum.S)
+            B cont
+
+        resta:
+            print restaText, lenRestaText
+            B cont
+
+        multiplicacion:
+            print multiplicacionText, lenMultiplicacionText
+            B cont
+
+        division:
+            print divisionText, lenDivisionText
+            B cont
+        
+        operacion_memoria:
+            print operacionesText, lenOperacionesText
+            B cont
+
+        cont:
+            input
+            B menu
+
+    end:
+        MOV x0, 0   // Codigo de error de la aplicacion -> 0: no hay error
+        MOV x8, 93  // Codigo de la llamada al sistema
+        SVC 0       // Ejecutar la llamada al sistema
 
 
-invalid_choice:
-    // Mostrar prompt para opción
-    mov x0, 1               // File descriptor para stdout
-    ldr x1, =invalid_option         // Dirección del prompt
-    mov x2, #41              // Longitud del prompt
-    mov x8, #64             // syscall write
-    svc 0
-
-    // Volver al ciclo del menú
-    b menu_loop
-
-call_sum:
-    bl do_sum               // Llamar a la función do_sum (en sum.S)
-    //bl print_number          // Llamar a la función para imprimir el número
-    b menu_loop             // Volver al menú
 
 
-exit_program:
 
-    // Finalizar el programa
-    mov x8, #93             // syscall exit
-    mov x0, #0              // Código de salida 0
-    svc 0

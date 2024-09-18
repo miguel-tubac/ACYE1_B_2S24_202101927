@@ -1,197 +1,296 @@
 .global do_sum
 
-.section .data
-    opciones: .asciz "\nMenu SUMA:\n1. Números separados\n2. Operación completa\n3. Separado por comas\n4. Regresar.."
-    seleccion: .asciz "\nIngrese una Opción: "
-    opcion1: .asciz "\nIngrese el primer número: "
-    opcion2: .asciz "Ingrese el segundo número: "
-    newline: .asciz "\n"
-    invalid_option: .asciz "\nOpción no válida, intenta de nuevo...\n"
-    result_msg: .asciz "Resultado de la suma: "
+.data
+    clear:
+        .asciz "\x1B[2J\x1B[H"
+        lenClear = . - clear
 
-.section .bss
-    .lcomm buffer, 256  // Buffer para almacenar la entrada del usuario
-    .lcomm num1, 4      // Buffer para el primer número (como entero, 4 bytes)
-    .lcomm num2, 4      // Buffer para el segundo número (como entero, 4 bytes)
-    .lcomm result, 10   // Buffer para el resultado de la suma (como cadena ASCII)
+    menuPrincipal:
+        .asciz "++ Menu Suma ++\n"
+        .asciz "1. Números separados\n"
+        .asciz "2. Operación completa\n"
+        .asciz "3. Separado por comas\n"
+        .asciz "4. Regresar..\n"
+        lenMenuPrincipal = .- menuPrincipal
 
-.section .text
+    msgOpcion:
+        .asciz "Ingrese Una Opcion: "
+        lenOpcion = .- msgOpcion
+
+    sumaSepa:
+        .asciz "Ingresando números separados\n"
+        lenSumaText = . - sumaSepa
+
+    sumaOpera:
+        .asciz "Ingresando operación completa\n"
+        lenRestaText = . - sumaOpera
+
+    sumaComas:
+        .asciz "Ingresando separado por comas\n"
+        lenMultiplicacionText = . - sumaComas
+
+    opcion1: 
+        .asciz "\nIngrese el primer número: "
+        lenOpcion1 = .- opcion1
+
+    opcion2: 
+        .asciz "Ingrese el segundo número: "
+        lenOpcion2 = .- opcion2
+
+    result_msg: 
+        .asciz "Resultado de la suma: "
+        lenResult = .- result_msg
+
+    input1:
+        .space 10
+    input2:
+        .space 10
+    result:
+        .space 12
+    newline:
+        .ascii "\n"
+
+    erronea:
+        .asciz "\nOpción no válida, intenta de nuevo..."
+        lenErronea = . - erronea
+
+.bss
+    opcion:
+        .space 5   // => El 5 indica cuantos BYTES se reservaran para la variable opcion
+
+.macro print texto, cantidad
+    MOV x0, 1
+    LDR x1, =\texto
+    LDR x2, =\cantidad
+    MOV x8, 64
+    SVC 0 
+.endm
+
+.macro input
+    MOV x0, 0
+    LDR x1, =opcion
+    LDR x2, =5
+    MOV x8, 63
+    SVC 0
+.endm
+
+
+.text
 do_sum:
-    /*
-    // Esperar a que el usuario presione Enter
-    mov x0, 0               // File descriptor para stdin
-    ldr x1, =buffer         // Dirección del buffer
-    mov x2, #1              // Leer 1 byte (Enter)
-    mov x8, #63             // syscall read
-    svc 0
-    */
+    stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
+    mov x29, sp                  // Establecer el frame pointer
+    menuS:
+        print clear, lenClear
+        print menuPrincipal, lenMenuPrincipal
+        print msgOpcion, lenOpcion
+        input
 
-suma_loop:
-    // Imprimir el menu
-    mov x0, 1          // Descriptor de archivo para stdout
-    ldr x1, =opciones   // Dirección del mensaje
-    mov x2, #92        // Longitud del mensaje
-    mov x8, 64         // Número de llamada al sistema para write
-    svc 0              // Llamada al sistema
+        LDR x10, =opcion
+        LDRB w10, [x10]
 
-    // Mostrar la selccion de opcion
-    mov x0, 1               // File descriptor para stdout
-    ldr x1, =seleccion         // Dirección del prompt
-    mov x2, #22              // Longitud del prompt
-    mov x8, #64             // syscall write
-    svc 0
+        /*// Imprimir el segundo mensaje
+        mov x0, 1          // Descriptor de archivo para stdout
+        ldr x1, =opcion   // Dirección del mensaje
+        mov x2, #5        // Longitud del mensaje
+        mov x8, 64         // Número de llamada al sistema para write
+        svc 0              // Llamada al sistema*/
 
-    // Leer la opción seleccionada
-    mov x0, 0               // File descriptor para stdin
-    mov x1, #0
-    ldr x1, =buffer         // Dirección del buffer
-    mov x2, #4              // Leer 1 byte (la opción)
-    mov x8, #63             // syscall read
-    svc 0
+        cmp w10, 49
+        beq sumaOperadoresSeparados
 
-    // Comparar la opción ingresada con '4'
-    ldrb w0, [x1]           // Cargar el valor de la opción (byte)
-    cmp w0, #'4'            // Comparar con '4'
-    beq salir        // Si es '4', salir del ciclo y regresar al menu principal
+        cmp w10, 50
+        beq sumaOperaCompleta
 
-    // Comparar la opción con '1' para la suma
-    cmp w0, #'1'            // Comparar con '1'
-    beq opcion_separados            // Si es '1', llamar a la función de suma
+        cmp w10, 51
+        beq sumaOperaComas
 
-    // Validar si es una opción válida entre '1' y '5'
-    cmp w0, #'1'            // Comparar con '1'
-    blt seleccion_invalida      // Si es menor que '1', opción inválida
-    cmp w0, #'4'            // Comparar con '5'
-    bgt seleccion_invalida      // Si es mayor que '5', opción inválida
+        cmp w10, 52
+        beq end
 
-    // Si es una opción válida, repetir el ciclo
-    b suma_loop
+        b invalido
 
-    ret
+        invalido:
+            print erronea, lenErronea
+            b cont
 
-salir: 
-    ret
+        sumaOperadoresSeparados:
+            print sumaSepa, lenSumaText
+            // Pedir numeros de entrada
+            // replicar el funcionamiendo de atoi(ASCII TO INTEGER)[Funcion de C]
+            // realizar operacion
+            // replicar el funcionamiento de itoa(INTEGER TO ASCII)[Funcion de C]
+            beq opcion_separados               // Llamar a la función do_sum (en sum.S)
+            b cont
 
-seleccion_invalida:
-    // Mostrar prompt para opción
-    mov x0, 1               // File descriptor para stdout
-    ldr x1, =invalid_option         // Dirección del prompt
-    mov x2, #41              // Longitud del prompt
-    mov x8, #64             // syscall write
-    svc 0
+        sumaOperaCompleta:
+            print sumaOpera, lenRestaText
+            b cont
 
-    // Volver al ciclo del menú
-    b suma_loop
+        sumaOperaComas:
+            print sumaComas, lenMultiplicacionText
+            b cont
 
-opcion_separados:
-    // Imprimir el primer mensaje
-    mov x0, 1          // Descriptor de archivo para stdout
-    ldr x1, =opcion1   // Dirección del mensaje
-    mov x2, #28        // Longitud del mensaje
-    mov x8, 64         // Número de llamada al sistema para write
-    svc 0              // Llamada al sistema
+        cont:
+            input
+            b menuS
 
-    // Leer el primer número
-    mov x0, 0          // Descriptor de archivo para stdin
-    ldr x1, =buffer    // Dirección del buffer
-    mov x2, #50       // Longitud del buffer para leer más datos
-    mov x8, 63         // Número de llamada al sistema para read
-    svc 0              // Llamada al sistema
-
-    // Convertir el primer número de ASCII a entero
-    ldr x1, =buffer    // Dirección del buffer
-    ldr x2, =num1      // Dirección para almacenar el entero
-    bl ascii_to_int    // Llamar a la función para convertir ASCII a entero
+    end:
+        ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
+        ret                          // Regresar al punto donde se llamó
 
 
-    // Imprimir el segundo mensaje
-    mov x0, 1          // Descriptor de archivo para stdout
-    ldr x1, =opcion2   // Dirección del mensaje
-    mov x2, #28        // Longitud del mensaje
-    mov x8, 64         // Número de llamada al sistema para write
-    svc 0              // Llamada al sistema
+    opcion_separados:
+        // Imprimir el primer mensaje
+        mov x0, 1          // Descriptor de archivo para stdout
+        ldr x1, =opcion1   // Dirección del mensaje
+        mov x2, lenOpcion1        // Longitud del mensaje
+        mov x8, 64         // Número de llamada al sistema para write
+        svc 0              // Llamada al sistema
 
-    // Leer el segundo número
-    mov x0, 0          // Descriptor de archivo para stdin
-    ldr x1, =buffer    // Dirección del buffer
-    mov x2, #50       // Longitud del buffer
-    mov x8, 63         // Número de llamada al sistema para read
-    svc 0              // Llamada al sistema
+        // Leer el primer número
+        mov x0, 0          // Descriptor de archivo para stdin
+        ldr x1, =input1    // Dirección del buffer
+        mov x2, 10       // Longitud del buffer para leer más datos
+        mov x8, 63         // Número de llamada al sistema para read
+        svc 0              // Llamada al sistema
 
-    // Convertir el segundo número de ASCII a entero
-    ldr x1, =buffer    // Dirección del buffer
-    ldr x2, =num2      // Dirección para almacenar el entero
-    bl ascii_to_int    // Llamar a la función para convertir ASCII a entero
+        // Imprimir el segundo mensaje
+        mov x0, 1          // Descriptor de archivo para stdout
+        ldr x1, =opcion2   // Dirección del mensaje
+        mov x2, lenOpcion2        // Longitud del mensaje
+        mov x8, 64         // Número de llamada al sistema para write
+        svc 0              // Llamada al sistema
 
-    // Realizar la suma
-    ldr x1, =num1      // Cargar el primer número
-    ldr x2, =num2      // Cargar el segundo número
-    ldr w3, [x1]       // Leer el primer número
-    ldr w4, [x2]       // Leer el segundo número
-    add w5, w3, w4     // Sumar los dos números
-    ldr x1, =result    // Dirección para almacenar el resultado
-    str w5, [x1]       // Guardar el resultado en el buffer
+        // Leer el segundo número
+        mov x0, 0          // Descriptor de archivo para stdin
+        ldr x1, =input2    // Dirección del buffer
+        mov x2, 10       // Longitud del buffer
+        mov x8, 63         // Número de llamada al sistema para read
+        svc 0              // Llamada al sistema
 
-    // Imprimir el mensaje del resultado
-    mov x0, 1          // Descriptor de archivo para stdout
-    ldr x1, =result_msg // Dirección del mensaje
-    mov x2, #23        // Longitud del mensaje
-    mov x8, 64         // Número de llamada al sistema para write
-    svc 0              // Llamada al sistema
+        // Convertir input1 a entero (atoi)
+        ldr x0, =input1   // cargar input1
+        bl atoi           // llamar a atoi
+        mov w5, w0        // guardar resultado en w5
 
-    // Imprimir el resultado de la suma
-    ldr x1, =result    // Dirección del resultado
-    ldr w0, [x1]       // Cargar el resultado a convertir
-    bl int_to_ascii    // Llamar a la función para convertir entero a ASCII
+        // Convertir input2 a entero (atoi)
+        ldr x0, =input2   // cargar input2
+        bl atoi           // llamar a atoi
+        mov w6, w0        // guardar resultado en w6
 
-    mov x0, 1          // Descriptor de archivo para stdout
-    ldr x2, =buffer    // Dirección del buffer con el resultado
-    ldr x1, [x2]       // Longitud del resultado (aquí asumimos que es menor a 256 bytes)
-    mov x8, 64         // Número de llamada al sistema para write
-    svc 0              // Llamada al sistema
+        // Sumar los dos números
+        add w7, w5, w6    // w7 = w5 + w6
 
-    // Volver al ciclo del menú
-    b suma_loop
+        // Convertir resultado a cadena (itoa)
+        mov w0, w7        // cargar resultado
+        ldr x1, =result   // cargar dirección de resultado
+        bl itoa           // llamar a itoa
+
+        // Mostrar mensaje
+        mov x0, 1         // stdout
+        ldr x1, =result_msg      // cargar mensaje
+        mov x2, lenResult    // tamaño mensaje
+        mov x8, 64        // syscall write
+        svc 0             // llamada al sistema
+
+        // Mostrar resultado
+        mov x0, 1         // stdout
+        ldr x1, =result   // cargar resultado
+        mov x2, 12        // tamaño resultado
+        mov x8, 64        // syscall write
+        svc 0             // llamada al sistema
+
+        // Mostrar nueva línea
+        mov x0, 1         // stdout
+        ldr x1, =newline  // cargar nueva línea
+        mov x2, 1         // tamaño nueva línea
+        mov x8, 64        // syscall write
+        svc 0             // llamada al sistema
+        
+        // Reiniciar variables
+        b reiniciar_variables
 
 
 
-// Función para convertir una cadena ASCII a entero
-ascii_to_int:
-    mov w3, 0          // Inicializar el entero resultante
-    ldr x4, =buffer    // Dirección de la cadena
-convert_loop:
-    ldrb w5, [x4], #1 // Cargar un byte de la cadena
-    cmp w5, #0         // Comparar con el fin de cadena
-    beq convert_done   // Si es el fin de cadena, terminar
-    sub w5, w5, #'0'   // Convertir de ASCII a número
-    mov w6, #10        // Cargar el valor inmediato 10 en w6
-    mul w3, w3, w6     // Multiplicar el resultado actual por 10
-    add w3, w3, w5     // Sumar el dígito
-    b convert_loop     // Continuar con el siguiente dígito
-convert_done:
-    str w3, [x2]       // Almacenar el resultado
-    ret
+   /* // Función para convertir una cadena ASCII a entero
+    // Función atoi: convierte cadena a entero
+    atoi:
+        mov w1, 0         // resultado
+    atoi_loop:
+        ldrb w2, [x0], 1  // cargar byte y avanzar
+        sub w2, w2, '0'   // convertir a número
+        cmp w2, 9         // verificar si es número
+        bhi atoi_end      // si no es, salimos
+        mov w3, 10        // multiplicador
+        mul w1, w1, w3    // multiplicar resultado por 10
+        add w1, w1, w2    // sumar dígito
+        b atoi_loop       // repetir
+    atoi_end:
+        mov w0, w1        // mover resultado a w0
+        ret               // retornar*/
 
-// Función para convertir un entero a cadena ASCII
-int_to_ascii:
-    mov w3, 10         // Base decimal
-    mov x4, x0         // Valor a convertir
-    ldr x2, =buffer    // Dirección del buffer
-    add x2, x2, #255   // Colocar el puntero al final del buffer
-    mov w1, #0         // Inicializar el índice del buffer
-reverse_loop:
-    udiv x0, x4, x3    // Dividir valor por 10
-    mul x1, x0, x3     // Multiplicar el cociente por 10
-    sub x1, x4, x1     // Obtener el dígito
-    //mov x1, x1         // Mover el dígito a un registro de 32 bits (copiar parte baja de x1 a w1)
-    add w1, w1, #48    // Convertir dígito a ASCII
-    strb w1, [x2], #-1 // Almacenar en el buffer (usa w1 para almacenar un byte)
-    mov x4, x0         // Actualizar valor
-    cmp x4, #0         // Verificar si se ha terminado
-    bne reverse_loop   // Si no ha terminado, continuar
+    // Función itoa: convierte entero a cadena
+    itoa:
+        mov w2, 10        // base 10
+        add x1, x1, 11    // mover puntero al final
+        strb wzr, [x1]    // agregar terminador nulo
+    itoa_loop:
+        udiv w3, w0, w2   // dividir número por 10
+        msub w4, w3, w2, w0 // obtener residuo
+        add w4, w4, '0'   // convertir a carácter
+        sub x1, x1, 1     // retroceder puntero
+        strb w4, [x1]     // almacenar carácter
+        mov w0, w3        // actualizar número
+        cbnz w0, itoa_loop// repetir mientras no sea cero
+        ret               // retornar
 
-    mov x0, x2         // Establecer puntero al inicio del buffer
-    ret
+
+
+
+
+
+
+
+
+
+
+
+    reiniciar_variables:
+        // Limpiar input1
+        ldr x0, =input1
+        mov w1, #0          // Poner 0 (nulo)
+        mov w2, #10         // Limitar a 10 bytes
+    reset_input1:
+        strb w1, [x0], #1   // Escribir 0 en cada byte del buffer
+        subs w2, w2, #1
+        b.ne reset_input1   // Si aún no hemos escrito en todos los bytes, repetir
+
+        // Limpiar input2
+        ldr x0, =input2
+        mov w2, #10
+    reset_input2:
+        strb w1, [x0], #1
+        subs w2, w2, #1
+        b.ne reset_input2
+
+        // Limpiar result
+        ldr x0, =result
+        mov w2, #12
+    reset_result:
+        strb w1, [x0], #1
+        subs w2, w2, #1
+        b.ne reset_result
+
+        // Limpiar opcion (aunque no es necesario aquí, lo hago por consistencia)
+        ldr x0, =opcion
+        mov w2, #5
+    reset_opcion:
+        strb w1, [x0], #1
+        subs w2, w2, #1
+        b.ne reset_opcion
+
+        b cont
+
 
 
 
