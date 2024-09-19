@@ -55,6 +55,10 @@
         .asciz "\nIngrese los numeros separados por una coma: "
         lenSumaPorComas = . - sumaPorComas
 
+    precionarEnter:
+        .asciz "\nPresione Enter para continuar..."
+        lenPrecionarEnter = . - precionarEnter
+
 .bss
     opcion:
         .space 5   // => El 5 indica cuantos BYTES se reservaran para la variable opcion
@@ -181,6 +185,13 @@ do_sum:
         ldr x1, =result   // cargar dirección de resultado
         bl itoa           // llamar a itoa
 
+        // Mostrar nueva línea
+        mov x0, 1         // stdout
+        ldr x1, =newline  // cargar nueva línea
+        mov x2, 1         // tamaño nueva línea
+        mov x8, 64        // syscall write
+        svc 0             // llamada al sistema
+
         // Mostrar mensaje
         mov x0, 1         // stdout
         ldr x1, =result_msg      // cargar mensaje
@@ -201,6 +212,13 @@ do_sum:
         mov x2, 1         // tamaño nueva línea
         mov x8, 64        // syscall write
         svc 0             // llamada al sistema
+
+        // Mostrar el precionar enter
+        mov x0, 1              // Descriptor de archivo para stdout
+        ldr x1, =precionarEnter       // Dirección de nueva línea
+        mov x2, lenPrecionarEnter             // Tamaño de nueva línea
+        mov x8, 64             // Número de llamada al sistema para write
+        svc 0                  // Llamada al sistema
         
         // Reiniciar variables
         b reiniciar_variables
@@ -247,6 +265,13 @@ do_sum:
             ldr x1, =result        // Cargar dirección de resultado
             bl itoa                // Llamar a itoa
 
+            // Mostrar nueva línea
+            mov x0, 1         // stdout
+            ldr x1, =newline  // cargar nueva línea
+            mov x2, 1         // tamaño nueva línea
+            mov x8, 64        // syscall write
+            svc 0             // llamada al sistema
+
             // Mostrar mensaje
             mov x0, 1              // Descriptor de archivo para stdout
             ldr x1, =result_msg    // Dirección del mensaje
@@ -262,9 +287,16 @@ do_sum:
             svc 0                  // Llamada al sistema
 
             // Mostrar nueva línea
+            mov x0, 1         // stdout
+            ldr x1, =newline  // cargar nueva línea
+            mov x2, 1         // tamaño nueva línea
+            mov x8, 64        // syscall write
+            svc 0             // llamada al sistema
+
+            // Mostrar el precionar enter
             mov x0, 1              // Descriptor de archivo para stdout
-            ldr x1, =newline       // Dirección de nueva línea
-            mov x2, 1              // Tamaño de nueva línea
+            ldr x1, =precionarEnter       // Dirección de nueva línea
+            mov x2, lenPrecionarEnter             // Tamaño de nueva línea
             mov x8, 64             // Número de llamada al sistema para write
             svc 0                  // Llamada al sistema
 
@@ -332,23 +364,28 @@ do_sum:
         // Manejar número negativo
         neg w0, w0            // Convertir el número a positivo
         mov w3, '-'           // Colocar el signo negativo
-        sub x1, x1, 1         // Retroceder puntero
-        strb w3, [x1]         // Almacenar el signo negativo
 
-    itoa_positive:
-        mov w2, 10            // Base 10
-        add x1, x1, 11        // Mover puntero al final
-        strb wzr, [x1]        // Agregar terminador nulo
+        strb w3, [x1]        // Almacenar el signo negativo
+        add x1, x1, 1        // Mover puntero para la siguiente posición
 
-    itoa_loop:
-        udiv w3, w0, w2       // Dividir número por 10
-        msub w4, w3, w2, w0   // Obtener residuo
-        add w4, w4, '0'       // Convertir residuo a carácter
-        sub x1, x1, 1         // Retroceder puntero
-        strb w4, [x1]         // Almacenar carácter
-        mov w0, w3            // Actualizar número
-        cbnz w0, itoa_loop    // Repetir mientras no sea 0
-        ret                   // Retornar
+        //sub x1, x1, 1         // Retroceder puntero
+        //strb w3, [x1]         // Almacenar el signo negativo
+
+        itoa_positive:
+            mov w2, 10            // Base 10
+
+            add x1, x1, 11        // Mover puntero al final
+            strb wzr, [x1]        // Agregar terminador nulo
+
+        itoa_loop:
+            udiv w3, w0, w2       // Dividir número por 10
+            msub w4, w3, w2, w0   // Obtener residuo
+            add w4, w4, '0'       // Convertir residuo a carácter
+            sub x1, x1, 1         // Retroceder puntero
+            strb w4, [x1]         // Almacenar carácter
+            mov w0, w3            // Actualizar número
+            cbnz w0, itoa_loop    // Repetir mientras no sea 0
+            ret                   // Retornar
 
 
     // Función para convertir una cadena ASCII a entero con la validacion de signos
@@ -362,35 +399,28 @@ do_sum:
         mov w2, 1          // Marcar el número como negativo
         ldrb w3, [x0], 1   // Avanzar al siguiente carácter después del signo
 
-    check_digit:
-        sub w3, w3, '0'    // Convertir el carácter a número
-        cmp w3, 9          // Verificar si es un número válido (0-9)
-        bhi atoi_end       // Si no es un número, finalizar
+        check_digit:
+            sub w3, w3, '0'    // Convertir el carácter a número
+            cmp w3, 9          // Verificar si es un número válido (0-9)
+            bhi atoi_end       // Si no es un número, finalizar
 
-    atoi_loop:
-        mov w4, 10         // Cargar el valor 10 en w4 para multiplicar
-        mul w1, w1, w4     // Multiplicar el resultado actual por 10
-        add w1, w1, w3     // Sumar el dígito actual al resultado
+        atoi_loop:
+            mov w4, 10         // Cargar el valor 10 en w4 para multiplicar
+            mul w1, w1, w4     // Multiplicar el resultado actual por 10
+            add w1, w1, w3     // Sumar el dígito actual al resultado
 
-        ldrb w3, [x0], 1   // Cargar el siguiente byte
-        sub w3, w3, '0'    // Convertir carácter a número
-        cmp w3, 9          // Verificar si es número válido
-        bls atoi_loop      // Si es un número, repetir
+            ldrb w3, [x0], 1   // Cargar el siguiente byte
+            sub w3, w3, '0'    // Convertir carácter a número
+            cmp w3, 9          // Verificar si es número válido
+            bls atoi_loop      // Si es un número, repetir
 
-    atoi_end:
-        cmp w2, 1          // Comprobar si el número era negativo
-        bne atoi_finish    // Si no es negativo, finalizar
-        neg w1, w1         // Si es negativo, cambiar el signo
+        atoi_end:
+            cmp w2, 1          // Comprobar si el número era negativo
+            bne atoi_finish    // Si no es negativo, finalizar
+            neg w1, w1         // Si es negativo, cambiar el signo
 
-    atoi_finish:
-        mov w0, w1         // Devolver el resultado en w0
-
-        /*// Imprimir el segundo mensaje
-                    mov x0, 1          // Descriptor de archivo para stdout
-                    ldr x1, =msgOpcion  // Dirección del mensaje
-                    mov x2, lenOpcion        // Longitud del mensaje
-                    mov x8, 64         // Número de llamada al sistema para write
-                    svc 0              // Llamada al sistema*/
+        atoi_finish:
+            mov w0, w1         // Devolver el resultado en w0
 
         ret                // Retornar el valor
 
@@ -402,34 +432,34 @@ do_sum:
         ldr x0, =input1
         mov w1, #0          // Poner 0 (nulo)
         mov w2, #10         // Limitar a 10 bytes
-    reset_input1:
-        strb w1, [x0], #1   // Escribir 0 en cada byte del buffer
-        subs w2, w2, #1
-        b.ne reset_input1   // Si aún no hemos escrito en todos los bytes, repetir
+        reset_input1:
+            strb w1, [x0], #1   // Escribir 0 en cada byte del buffer
+            subs w2, w2, #1
+            b.ne reset_input1   // Si aún no hemos escrito en todos los bytes, repetir
 
-        // Limpiar input2
-        ldr x0, =input2
-        mov w2, #10
-    reset_input2:
-        strb w1, [x0], #1
-        subs w2, w2, #1
-        b.ne reset_input2
+            // Limpiar input2
+            ldr x0, =input2
+            mov w2, #10
+        reset_input2:
+            strb w1, [x0], #1
+            subs w2, w2, #1
+            b.ne reset_input2
 
-        // Limpiar result
-        ldr x0, =result
-        mov w2, #12
-    reset_result:
-        strb w1, [x0], #1
-        subs w2, w2, #1
-        b.ne reset_result
+            // Limpiar result
+            ldr x0, =result
+            mov w2, #12
+        reset_result:
+            strb w1, [x0], #1
+            subs w2, w2, #1
+            b.ne reset_result
 
-        // Limpiar opcion (aunque no es necesario aquí, lo hago por consistencia)
-        ldr x0, =opcion
-        mov w2, #5
-    reset_opcion:
-        strb w1, [x0], #1
-        subs w2, w2, #1
-        b.ne reset_opcion
+            // Limpiar opcion (aunque no es necesario aquí, lo hago por consistencia)
+            ldr x0, =opcion
+            mov w2, #5
+        reset_opcion:
+            strb w1, [x0], #1
+            subs w2, w2, #1
+            b.ne reset_opcion
 
         b cont
 
