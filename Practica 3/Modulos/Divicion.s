@@ -1,4 +1,4 @@
-.global do_sum
+.global do_div
 
 .data
     clear:
@@ -6,7 +6,7 @@
         lenClear = . - clear
 
     menuPrincipal:
-        .asciz "++ Menu Suma ++\n"
+        .asciz "//// Menu Divición ////\n"
         .asciz "1. Números separados\n"
         .asciz "2. Operación completa\n"
         .asciz "3. Separado por comas\n"
@@ -38,7 +38,7 @@
         lenOpcion2 = .- opcion2
 
     result_msg: 
-        .asciz "Resultado de la suma: "
+        .asciz "Resultado de la divición: "
         lenResult = .- result_msg
 
     input1:
@@ -82,7 +82,7 @@
 
 
 .text
-do_sum:
+do_div:
     stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
     mov x29, sp                  // Establecer el frame pointer
     menuS:
@@ -102,13 +102,13 @@ do_sum:
         svc 0              // Llamada al sistema*/
 
         cmp w10, 49
-        beq sumaOperadoresSeparados
+        beq multiOperadoresSeparados
 
         cmp w10, 50
-        beq sumaOperaCompleta
+        beq multiOperaCompleta
 
         cmp w10, 51
-        beq sumaOperaComas
+        beq multiOperaComas
 
         cmp w10, 52
         beq end
@@ -119,7 +119,7 @@ do_sum:
             print erronea, lenErronea
             b cont
 
-        sumaOperadoresSeparados:
+        multiOperadoresSeparados:
             print sumaSepa, lenSumaText
             // Pedir numeros de entrada
             // replicar el funcionamiendo de atoi(ASCII TO INTEGER)[Funcion de C]
@@ -128,12 +128,12 @@ do_sum:
             beq opcion_separados               // Llamar a la función do_sum (en sum.S)
             b cont
 
-        sumaOperaCompleta:
+        multiOperaCompleta:
             print sumaOpera, lenRestaText
-            beq operacion_completa
+            //beq operacion_completa
             b cont
 
-        sumaOperaComas:
+        multiOperaComas:
             print sumaComas, lenMultiplicacionText
             b cont
 
@@ -186,7 +186,7 @@ do_sum:
         mov w6, w0        // guardar resultado en w6
 
         // Sumar los dos números
-        add w7, w5, w6    // w7 = w5 + w6
+        sdiv w7, w5, w6    // w7 = w5 + w6
 
         // Convertir resultado a cadena (itoa)
         mov w0, w7        // cargar resultado
@@ -217,97 +217,6 @@ do_sum:
         // Reiniciar variables
         b reiniciar_variables
 
-
-
-
-
-
-    operacion_completa:
-        // Imprimir el primer mensaje
-        mov x0, 1              // Descriptor de archivo para stdout
-        ldr x1, =completoSuma  // Dirección del mensaje
-        mov x2, lenCompleto    // Longitud del mensaje
-        mov x8, 64             // Número de llamada al sistema para write
-        svc 0                  // Llamada al sistema
-
-        // Leer la operación completa
-        mov x0, 0              // Descriptor de archivo para stdin
-        ldr x1, =opracionCom   // Dirección del buffer
-        mov x2, 50             // Longitud del buffer
-        mov x8, 63             // Número de llamada al sistema para read
-        svc 0                  // Llamada al sistema
-
-        // Procesar la cadena de operación
-        ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
-        bl find_operator       // Encontrar el operador '+' y dividir la cadena
-
-        // Convertir números a enteros
-        ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
-        bl atoi                // Convertir la primera parte a entero (primer número)
-        mov w5, w0             // Guardar el primer número en w5
-
-        // Encontrar el operador '+' y convertir el segundo número
-        ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
-        bl atoi                // Convertir la segunda parte a entero (segundo número)
-        mov w6, w0             // Guardar el segundo número en w6
-
-        // Sumar los dos números
-        add w7, w5, w6         // w7 = w5 + w6
-
-        // Convertir resultado a cadena (itoa)
-        mov w0, w7             // Cargar resultado
-        ldr x1, =result        // Cargar dirección de resultado
-        bl itoa                // Llamar a itoa
-
-        // Mostrar mensaje
-        mov x0, 1              // Descriptor de archivo para stdout
-        ldr x1, =result_msg    // Dirección del mensaje
-        mov x2, lenResult      // Tamaño del mensaje
-        mov x8, 64             // Número de llamada al sistema para write
-        svc 0                  // Llamada al sistema
-
-        // Mostrar resultado
-        mov x0, 1              // Descriptor de archivo para stdout
-        ldr x1, =result        // Dirección del resultado
-        mov x2, 12             // Tamaño del resultado
-        mov x8, 64             // Número de llamada al sistema para write
-        svc 0                  // Llamada al sistema
-
-        // Mostrar nueva línea
-        mov x0, 1              // Descriptor de archivo para stdout
-        ldr x1, =newline       // Dirección de nueva línea
-        mov x2, 1              // Tamaño de nueva línea
-        mov x8, 64             // Número de llamada al sistema para write
-        svc 0                  // Llamada al sistema
-
-        // Reiniciar variables
-        b reiniciar_variables
-
-    // Función para encontrar el operador '+' y dividir la cadena
-    find_operator:
-        ldr x2, =opracionCom   // Cargar dirección de la cadena de operación
-        mov x1, 0              // Inicializar el puntero del segundo número
-    find_loop:
-        ldrb w3, [x2], 1      // Cargar un carácter de la cadena
-        cmp w3, '+'            // Comparar con el operador '+'
-        beq found_plus         // Si es '+', proceder
-        cbnz w3, find_loop     // Repetir hasta encontrar '+'
-
-    found_plus:
-        ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
-        add x2, x2, -1         // Retroceder un carácter para el siguiente número
-        strb wzr, [x2]        // Colocar un terminador nulo después del '+'
-
-        ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
-        bl atoi                // Convertir la primera parte de la cadena a entero
-        mov w5, w0             // Guardar el primer número en w5
-
-        ldr x0, =opracionCom   // Cargar dirección de la segunda parte de la cadena
-        add x0, x0, 1          // Mover dirección al siguiente carácter después del '+'
-        bl atoi                // Convertir el segundo número de la cadena a entero
-        mov w6, w0             // Guardar el segundo número en w6
-
-        ret
 
 
 

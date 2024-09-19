@@ -1,5 +1,8 @@
 .global _start
 .extern do_sum  // Declaramos la función externa que está en sum.S
+.extern do_res
+.extern do_mul
+.extern do_div
 
 .data
     clear:
@@ -128,14 +131,17 @@ _start:
 
         resta:
             print restaText, lenRestaText
+            bl do_res
             B cont
 
         multiplicacion:
             print multiplicacionText, lenMultiplicacionText
+            bl do_mul
             B cont
 
         division:
             print divisionText, lenDivisionText
+            bl do_div
             B cont
         
         operacion_memoria:
