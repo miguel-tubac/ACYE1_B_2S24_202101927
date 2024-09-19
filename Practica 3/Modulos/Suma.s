@@ -241,16 +241,15 @@ do_sum:
             ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
             bl find_operator       // Encontrar el operador '+' y dividir la cadena
 
-            // Convertir números a enteros
-            ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
-            bl atoi                // Convertir la primera parte a entero (primer número)
-            mov w5, w0             // Guardar el primer número en w5
+            // Convertir input1 a entero (atoi)
+            mov x0, x5   // cargar input1
+            bl atoi           // llamar a atoi
+            mov w5, w0        // guardar resultado en w5
 
-            // Encontrar el operador '+' y convertir el segundo número
-            ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
-            add x0, x0, 1          // Mover dirección al siguiente carácter después del '+'
-            bl atoi                // Convertir el segundo número a entero
-            mov w6, w0             // Guardar el segundo número en w6
+            // Convertir input2 a entero (atoi)
+            mov x0, x6   // cargar input2
+            bl atoi           // llamar a atoi
+            mov w6, w0        // guardar resultado en w6
 
             // Sumar los dos números
             add w7, w5, w6         // w7 = w5 + w6
@@ -284,27 +283,50 @@ do_sum:
             // Reiniciar variables
             b reiniciar_variables
 
-        // Función para encontrar el operador '+' y dividir la cadena
-        find_operator:
-            ldr x2, =opracionCom   // Cargar dirección de la cadena de operación
-    find_loop:
-            ldrb w3, [x2], 1      // Cargar un carácter de la cadena
-            cmp w3, '+'            // Comparar con el operador '+'
-            beq found_plus         // Si es '+', proceder
-            cbnz w3, find_loop     // Repetir hasta encontrar '+'
+    // Función para encontrar el operador '+' y dividir la cadena
+    find_operator:
+        ldr x2, =opracionCom     // Cargar dirección de la cadena de operación
+        mov x3, x2               // Guardar la dirección inicial para procesar el primer número
+
+        find_loop:
+            ldrb w4, [x2]            // Cargar un carácter de la cadena
+            cmp w4, '+'              // Comparar con el operador '+'
+            beq found_plus           // Si es '+', proceder
+
+            add x2, x2, 1            // Mover al siguiente carácter
+            cbnz w4, find_loop       // Repetir hasta encontrar '+'
 
         found_plus:
-            strb wzr, [x2]         // Colocar un terminador nulo después del '+'
+            strb wzr, [x2]           // Colocar un terminador nulo después del '+'
 
-            ldr x0, =opracionCom   // Cargar la dirección de opracionCom
-            add x0, x0, 1          // Ajustar la dirección al segundo número (justo después del '+')
-            bl atoi                // Convertir el segundo número de la cadena a entero
-            mov w6, w0             // Guardar el segundo número en w6
+            // Convertir el primer número de la cadena a entero (input1)
+            mov x0, x3               // Dirección del inicio de la cadena
+            mov w5, w0               // Guardar el primer número en w5 (input1)
 
-            ret
-                 
+            // Procesar el segundo número después del '+'
+            add x0, x2, 1            // Apuntar justo después del '+'
+            mov w6, w0               // Guardar el segundo número en w6 (input2)
+
+        ret
 
 
+
+
+                    /*// Imprimir el segundo mensaje
+                    mov x0, 1          // Descriptor de archivo para stdout
+                    ldr x1, =msgOpcion  // Dirección del mensaje
+                    mov x2, lenOpcion        // Longitud del mensaje
+                    mov x8, 64         // Número de llamada al sistema para write
+                    svc 0              // Llamada al sistema*/
+
+
+
+                /*// Imprimir dirección del puntero x2
+                mov x0, 1              // Descriptor de archivo para stdout
+                mov x1, x2             // Dirección de la cadena actual
+                mov x2, 50             // Tamaño del mensaje (ajusta según el tamaño)
+                mov x8, 64             // syscall: write
+                svc 0*/
 
 
 
@@ -374,6 +396,14 @@ do_sum:
 
     atoi_finish:
         mov w0, w1         // Devolver el resultado en w0
+
+        /*// Imprimir el segundo mensaje
+                    mov x0, 1          // Descriptor de archivo para stdout
+                    ldr x1, =msgOpcion  // Dirección del mensaje
+                    mov x2, lenOpcion        // Longitud del mensaje
+                    mov x8, 64         // Número de llamada al sistema para write
+                    svc 0              // Llamada al sistema*/
+
         ret                // Retornar el valor
 
 

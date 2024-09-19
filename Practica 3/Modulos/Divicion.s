@@ -8,9 +8,8 @@
     menuPrincipal:
         .asciz "//// Menu Divición ////\n"
         .asciz "1. Números separados\n"
-        .asciz "2. Operación completa\n"
-        .asciz "3. Separado por comas\n"
-        .asciz "4. Regresar..\n"
+        .asciz "2. Separado por comas\n"
+        .asciz "3. Regresar..\n"
         lenMenuPrincipal = .- menuPrincipal
 
     msgOpcion:
@@ -21,9 +20,9 @@
         .asciz "Ingresando números separados\n"
         lenSumaText = . - sumaSepa
 
-    sumaOpera:
-        .asciz "Ingresando operación completa\n"
-        lenRestaText = . - sumaOpera
+    denominador:
+        .asciz "\nError no se puede dividir entre 0 ..."
+        lenDeno = . - denominador
 
     sumaComas:
         .asciz "Ingresando separado por comas\n"
@@ -55,10 +54,6 @@
     erronea:
         .asciz "\nOpción no válida, intenta de nuevo..."
         lenErronea = . - erronea
-    
-    completoSuma:
-        .asciz "\nIngrese la operación completa: "
-        lenCompleto = . - completoSuma
 
 .bss
     opcion:
@@ -102,15 +97,12 @@ do_div:
         svc 0              // Llamada al sistema*/
 
         cmp w10, 49
-        beq multiOperadoresSeparados
+        beq divOperadoresSeparados
 
         cmp w10, 50
-        beq multiOperaCompleta
+        beq divOperaComas
 
         cmp w10, 51
-        beq multiOperaComas
-
-        cmp w10, 52
         beq end
 
         b invalido
@@ -119,7 +111,7 @@ do_div:
             print erronea, lenErronea
             b cont
 
-        multiOperadoresSeparados:
+        divOperadoresSeparados:
             print sumaSepa, lenSumaText
             // Pedir numeros de entrada
             // replicar el funcionamiendo de atoi(ASCII TO INTEGER)[Funcion de C]
@@ -128,12 +120,7 @@ do_div:
             beq opcion_separados               // Llamar a la función do_sum (en sum.S)
             b cont
 
-        multiOperaCompleta:
-            print sumaOpera, lenRestaText
-            //beq operacion_completa
-            b cont
-
-        multiOperaComas:
+        divOperaComas:
             print sumaComas, lenMultiplicacionText
             b cont
 
@@ -144,6 +131,10 @@ do_div:
     end:
         ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
         ret                          // Regresar al punto donde se llamó
+
+    error_denominador:
+        print denominador, lenDeno
+        b cont
 
 
     opcion_separados:
@@ -174,6 +165,12 @@ do_div:
         mov x2, 10       // Longitud del buffer
         mov x8, 63         // Número de llamada al sistema para read
         svc 0              // Llamada al sistema
+
+        //Comparar si el denominaro es cero:
+        ldr x10, =input2
+        ldrb w10, [x10]
+        cmp w10, 48
+        beq error_denominador
 
         // Convertir input1 a entero (atoi)
         ldr x0, =input1   // cargar input1

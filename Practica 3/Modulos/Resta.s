@@ -8,9 +8,8 @@
     menuPrincipal:
         .asciz "---- Menu Resta ----\n"
         .asciz "1. Números separados\n"
-        .asciz "2. Operación completa\n"
-        .asciz "3. Separado por comas\n"
-        .asciz "4. Regresar..\n"
+        .asciz "2. Separado por comas\n"
+        .asciz "3. Regresar..\n"
         lenMenuPrincipal = .- menuPrincipal
 
     msgOpcion:
@@ -20,10 +19,6 @@
     sumaSepa:
         .asciz "Ingresando números separados\n"
         lenSumaText = . - sumaSepa
-
-    sumaOpera:
-        .asciz "Ingresando operación completa\n"
-        lenRestaText = . - sumaOpera
 
     sumaComas:
         .asciz "Ingresando separado por comas\n"
@@ -55,10 +50,6 @@
     erronea:
         .asciz "\nOpción no válida, intenta de nuevo..."
         lenErronea = . - erronea
-    
-    completoSuma:
-        .asciz "\nIngrese la operación completa: "
-        lenCompleto = . - completoSuma
 
 .bss
     opcion:
@@ -105,12 +96,9 @@ do_res:
         beq restaOperadoresSeparados
 
         cmp w10, 50
-        beq restaOperaCompleta
-
-        cmp w10, 51
         beq restaOperaComas
 
-        cmp w10, 52
+        cmp w10, 51
         beq end
 
         b invalido
@@ -126,11 +114,6 @@ do_res:
             // realizar operacion
             // replicar el funcionamiento de itoa(INTEGER TO ASCII)[Funcion de C]
             beq opcion_separados               // Llamar a la función do_sum (en sum.S)
-            b cont
-
-        restaOperaCompleta:
-            print sumaOpera, lenRestaText
-            //beq operacion_completa
             b cont
 
         restaOperaComas:
