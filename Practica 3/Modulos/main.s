@@ -32,7 +32,7 @@
         lenMenuPrincipal = .- menuPrincipal
 
     msgOpcion:
-        .asciz "Ingrese Una Opcion: "
+        .asciz "\nIngrese Una Opcion: "
         lenOpcion = .- msgOpcion
 
     sumaText:
@@ -58,6 +58,13 @@
     erronea:
         .asciz "\nOpción no válida, intenta de nuevo..."
         lenErronea = . - erronea
+
+    msgSalida:
+        .asciz "\n                                     ...¡¡¡¡Que tenga un feliz día!!!!..."
+        lenMsgSalida = . - msgSalida
+
+    newline:
+        .ascii "\n"
 
 .bss
     opcion:
@@ -153,6 +160,21 @@ _start:
             B menu
 
     end:
+        // Mostrar el precionar enter
+        mov x0, 1              // Descriptor de archivo para stdout
+        ldr x1, =msgSalida       // Dirección de nueva línea
+        mov x2, lenMsgSalida             // Tamaño de nueva línea
+        mov x8, 64             // Número de llamada al sistema para write
+        svc 0                  // Llamada al sistema
+        input
+
+        // Mostrar el precionar enter
+        mov x0, 1              // Descriptor de archivo para stdout
+        ldr x1, =newline      // Dirección de nueva línea
+        mov x2, 1            // Tamaño de nueva línea
+        mov x8, 64             // Número de llamada al sistema para write
+        svc 0                  // Llamada al sistema
+
         MOV x0, 0   // Codigo de error de la aplicacion -> 0: no hay error
         MOV x8, 93  // Codigo de la llamada al sistema
         SVC 0       // Ejecutar la llamada al sistema

@@ -13,7 +13,7 @@
         lenMenuPrincipal = .- menuPrincipal
 
     msgOpcion:
-        .asciz "Ingrese Una Opcion: "
+        .asciz "\nIngrese Una Opcion: "
         lenOpcion = .- msgOpcion
 
     sumaSepa:
@@ -33,7 +33,7 @@
         lenOpcion2 = .- opcion2
 
     result_msg: 
-        .asciz "Resultado de la suma: "
+        .asciz "\nResultado de la suma: "
         lenResult = .- result_msg
 
     input1:
@@ -56,8 +56,12 @@
         lenSumaPorComas = . - sumaPorComas
 
     precionarEnter:
-        .asciz "\nPresione Enter para continuar..."
+        .asciz "\n\nPresione Enter para continuar..."
         lenPrecionarEnter = . - precionarEnter
+
+    regresandoInicio:
+        .asciz "\n...Presione Enter para regresar..."
+        lenRegresandoInicio = . - regresandoInicio
 
 .bss
     opcion:
@@ -134,6 +138,13 @@ do_sum:
             b menuS
 
     end:
+        // Mostrar el precionar enter
+        mov x0, 1              // Descriptor de archivo para stdout
+        ldr x1, =regresandoInicio       // Dirección de nueva línea
+        mov x2, lenRegresandoInicio             // Tamaño de nueva línea
+        mov x8, 64             // Número de llamada al sistema para write
+        svc 0                  // Llamada al sistema
+
         ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
         ret                          // Regresar al punto donde se llamó
 
@@ -185,13 +196,6 @@ do_sum:
         ldr x1, =result   // cargar dirección de resultado
         bl itoa           // llamar a itoa
 
-        // Mostrar nueva línea
-        mov x0, 1         // stdout
-        ldr x1, =newline  // cargar nueva línea
-        mov x2, 1         // tamaño nueva línea
-        mov x8, 64        // syscall write
-        svc 0             // llamada al sistema
-
         // Mostrar mensaje
         mov x0, 1         // stdout
         ldr x1, =result_msg      // cargar mensaje
@@ -203,13 +207,6 @@ do_sum:
         mov x0, 1         // stdout
         ldr x1, =result   // cargar resultado
         mov x2, 12        // tamaño resultado
-        mov x8, 64        // syscall write
-        svc 0             // llamada al sistema
-
-        // Mostrar nueva línea
-        mov x0, 1         // stdout
-        ldr x1, =newline  // cargar nueva línea
-        mov x2, 1         // tamaño nueva línea
         mov x8, 64        // syscall write
         svc 0             // llamada al sistema
 
@@ -265,13 +262,6 @@ do_sum:
             ldr x1, =result        // Cargar dirección de resultado
             bl itoa                // Llamar a itoa
 
-            // Mostrar nueva línea
-            mov x0, 1         // stdout
-            ldr x1, =newline  // cargar nueva línea
-            mov x2, 1         // tamaño nueva línea
-            mov x8, 64        // syscall write
-            svc 0             // llamada al sistema
-
             // Mostrar mensaje
             mov x0, 1              // Descriptor de archivo para stdout
             ldr x1, =result_msg    // Dirección del mensaje
@@ -285,13 +275,6 @@ do_sum:
             mov x2, 12             // Tamaño del resultado
             mov x8, 64             // Número de llamada al sistema para write
             svc 0                  // Llamada al sistema
-
-            // Mostrar nueva línea
-            mov x0, 1         // stdout
-            ldr x1, =newline  // cargar nueva línea
-            mov x2, 1         // tamaño nueva línea
-            mov x8, 64        // syscall write
-            svc 0             // llamada al sistema
 
             // Mostrar el precionar enter
             mov x0, 1              // Descriptor de archivo para stdout
