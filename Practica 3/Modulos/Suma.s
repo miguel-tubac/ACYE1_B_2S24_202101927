@@ -8,9 +8,8 @@
     menuPrincipal:
         .asciz "++++ Menu Suma ++++\n"
         .asciz "1. Números separados\n"
-        .asciz "2. Operación completa\n"
-        .asciz "3. Separado por comas\n"
-        .asciz "4. Regresar..\n"
+        .asciz "2. Separado por coma\n"
+        .asciz "3. Regresar..\n"
         lenMenuPrincipal = .- menuPrincipal
 
     msgOpcion:
@@ -18,15 +17,11 @@
         lenOpcion = .- msgOpcion
 
     sumaSepa:
-        .asciz "Ingresando números separados\n"
+        .asciz "...Ingresando números separados...\n"
         lenSumaText = . - sumaSepa
 
-    sumaOpera:
-        .asciz "Ingresando operación completa\n"
-        lenRestaText = . - sumaOpera
-
     sumaComas:
-        .asciz "Ingresando separado por comas\n"
+        .asciz "...Ingresando separado por comas...\n"
         lenMultiplicacionText = . - sumaComas
 
     opcion1: 
@@ -56,9 +51,9 @@
         .asciz "\nOpción no válida, intenta de nuevo..."
         lenErronea = . - erronea
     
-    completoSuma:
-        .asciz "\nIngrese la operación completa: "
-        lenCompleto = . - completoSuma
+    sumaPorComas:
+        .asciz "\nIngrese los numeros separados por una coma: "
+        lenSumaPorComas = . - sumaPorComas
 
 .bss
     opcion:
@@ -105,12 +100,9 @@ do_sum:
         beq sumaOperadoresSeparados
 
         cmp w10, 50
-        beq sumaOperaCompleta
-
-        cmp w10, 51
         beq sumaOperaComas
 
-        cmp w10, 52
+        cmp w10, 51
         beq end
 
         b invalido
@@ -128,13 +120,9 @@ do_sum:
             beq opcion_separados               // Llamar a la función do_sum (en sum.S)
             b cont
 
-        sumaOperaCompleta:
-            print sumaOpera, lenRestaText
-            beq operacion_completa
-            b cont
-
         sumaOperaComas:
             print sumaComas, lenMultiplicacionText
+            beq operacion_completa
             b cont
 
         cont:
@@ -225,8 +213,8 @@ do_sum:
     operacion_completa:
             // Imprimir el primer mensaje
             mov x0, 1              // Descriptor de archivo para stdout
-            ldr x1, =completoSuma  // Dirección del mensaje
-            mov x2, lenCompleto    // Longitud del mensaje
+            ldr x1, =sumaPorComas  // Dirección del mensaje
+            mov x2, lenSumaPorComas    // Longitud del mensaje
             mov x8, 64             // Número de llamada al sistema para write
             svc 0                  // Llamada al sistema
 
@@ -290,7 +278,7 @@ do_sum:
 
         find_loop:
             ldrb w4, [x2]            // Cargar un carácter de la cadena
-            cmp w4, '+'              // Comparar con el operador '+'
+            cmp w4, ','              // Comparar con el operador '+'
             beq found_plus           // Si es '+', proceder
 
             add x2, x2, 1            // Mover al siguiente carácter
