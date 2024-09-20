@@ -3,6 +3,7 @@
 .extern do_res
 .extern do_mul
 .extern do_div
+.extern do_memoria
 
 .data
     clear:
@@ -153,6 +154,7 @@ _start:
         
         operacion_memoria:
             print operacionesText, lenOperacionesText
+            bl do_memoria
             B cont
 
         cont:
