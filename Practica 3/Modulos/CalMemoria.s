@@ -64,6 +64,14 @@
         .asciz "\n...Presione Enter para regresar..."
         lenRegresandoInicio = . - regresandoInicio
 
+    denominador:
+        .asciz "\n...Error no se puede dividir entre 0 ..."
+        lenDeno = . - denominador
+
+    cadena_exit:
+        .asciz "#202101927-exit"
+        lenCadExit = . -cadena_exit
+
 .bss
     opcion:
         .space 5   // => El 5 indica cuantos BYTES se reservaran para la variable opcion
@@ -87,19 +95,19 @@
 
 .text
 do_memoria:
-    //
-    /*// Inicializar acumulado a 0 al principio del programa
-    mov x2, #0               // Mueve 0 a x2
-    ldr x1, =acumulado        // Carga la dirección de 'acumulado'
-    str x2, [x1]             // Guarda 0 en 'acumulado'*/
-
-    mov x2, #1               // Mueve 0 a x2
-    ldr x1, =primera_ejecucion        // Carga la dirección de 'acumulado'
-    str x2, [x1]             // Guarda 0 en 'acumulado'*/
-
     stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
     mov x29, sp                  // Establecer el frame pointer
+
     menuS:
+        // Inicializar acumulado a 0 al principio del programa
+        mov x2, #0               // Mueve 0 a x2
+        ldr x1, =acumulado        // Carga la dirección de 'acumulado'
+        str x2, [x1]             // Guarda 0 en 'acumulado'*/
+
+        mov x2, #1               // Mueve 0 a x2
+        ldr x1, =primera_ejecucion        // Carga la dirección de 'acumulado'
+        str x2, [x1]             // Guarda 0 en 'acumulado'*/
+
         print clear, lenClear
         print menuPrincipal, lenMenuPrincipal
         print msgOpcion, lenOpcion
@@ -151,6 +159,10 @@ do_memoria:
         ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
         ret                          // Regresar al punto donde se llamó
 
+    error_denominador:
+        print denominador, lenDeno
+        b cont
+
 
 
     operacion_completa:
@@ -173,16 +185,56 @@ do_memoria:
             mov x8, 63             // Número de llamada al sistema para read
             svc 0                  // Llamada al sistema
 
+        // Remover el salto de línea (\n) de la cadena de entrada
+            ldr x1, =opracionCom         // Cargar la dirección de la cadena ingresada
+            mov x3, #0                   // Inicializar el índice
+
+        remover_nueva_linea:
+            ldrb w4, [x1, x3]            // Leer el carácter actual de la cadena
+            cmp w4, #10                  // Comparar con el código ASCII de '\n' (10)
+            beq poner_nulo               // Si es '\n', saltar a poner_nulo
+            cmp w4, #0                   // Si es nulo, terminar
+            //beq fin_remover_nueva_linea
+            add x3, x3, #1               // Incrementar el índice
+            b remover_nueva_linea        // Repetir
+
+        poner_nulo:
+            strb wzr, [x1, x3]           // Reemplazar '\n' con un carácter nulo
+
+        /*fin_remover_nueva_linea:
+            // Mostrar resultado después de limpiar
+            mov x0, 1                    // Descriptor de archivo para stdout
+            ldr x1, =opracionCom          // Dirección del resultado
+            mov x2, 50                   // Tamaño del resultado
+            mov x8, 64                   // Número de llamada al sistema para write
+            svc 0                        // Llamada al sistema*/
+
+
+        comparar_cadena:
+            ldr x1, =opracionCom         // Cargar la dirección de la cadena ingresada
+            ldr x2, =cadena_exit         // Cargar la dirección de la cadena "#202101927-exit"
+            
+            mov x3, #0                   // Inicializar el índice
+            
+        comparar_ciclo:
+            ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
+            ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "#202101927-exit"
+            
+            cmp w4, w5                   // Comparar ambos caracteres
+            bne no_coincide              // Si no coinciden, saltar a no_match
+            
+            cbz w4, conside              // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
+            
+            add x3, x3, #1               // Incrementar el índice
+            b comparar_ciclo              // Repetir el bucle
+
+        conside:
+            b menuS       
+
+        no_coincide:
             // Procesar la cadena de operación
             ldr x0, =opracionCom   // Cargar dirección de la cadena de operación
             bl find_operator       // Encontrar el operador '+' y dividir la cadena
-
-            /*// Imprimir dirección del puntero x2
-            mov x0, 1              // Descriptor de archivo para stdout
-            mov x1, x4             // Dirección de la cadena actual
-            mov x2, 10             // Tamaño del mensaje (ajusta según el tamaño)
-            mov x8, 64             // syscall: write
-            svc 0       //*/
 
         suma_separada:
             ldr x1, =primera_ejecucion // Cargar la dirección de primera_ejecucion
@@ -224,7 +276,7 @@ do_memoria:
             bl atoi           // llamar a atoi
             mov w6, w0        // guardar resultado en w6
 
-            //b seleccion_operacion
+            b seleccion_operacion
             
         seleccion_operacion:
             /*// Imprimir dirección del puntero x2
@@ -260,6 +312,10 @@ do_memoria:
             b continuar  
         
         realizar_divi:
+            // Comparar si el denominador (w6) es cero
+            cmp w6, #0              // Comparar el valor numérico en w6 con 0
+            beq error_denominador    // Si es 0, ir a la rutina de error
+
             sdiv w7, w5, w6      
             b continuar  
 
@@ -289,16 +345,6 @@ do_memoria:
             
             b reiniciar_variables2
             
-
-        // Mostrar el precionar enter
-        mov x0, 1              // Descriptor de archivo para stdout
-        ldr x1, =precionarEnter       // Dirección de nueva línea
-        mov x2, lenPrecionarEnter             // Tamaño de nueva línea
-        mov x8, 64             // Número de llamada al sistema para write
-        svc 0                  // Llamada al sistema
-
-        // Reiniciar variables
-        b reiniciar_variables
 
     // Función para encontrar el operador '+' y dividir la cadena
     find_operator:
@@ -335,6 +381,38 @@ do_memoria:
             mov w6, w0               // Guardar el segundo número en w6 (input2)
 
         ret
+
+
+    //Comprar la cedena de entrada #202101927-exit
+    // Dirección de la cadena "#202101927-exit"
+    ldr x1, =opracionCom         // Cargar la dirección de la cadena ingresada
+    ldr x2, =cadena_exit         // Cargar la dirección de la cadena "#202101927-exit"
+    
+    mov x3, #0                   // Inicializar el índice
+
+    comparar_loop:
+        ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
+        ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "#202101927-exit"
+        
+        cmp w4, w5                   // Comparar ambos caracteres
+        bne no_match                 // Si no coinciden, saltar a no_match
+        
+        cbz w4, match                // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
+        
+        add x3, x3, #1               // Incrementar el índice
+        b comparar_loop              // Repetir el bucle
+
+        no_match:
+            // Aquí va el código si las cadenas no coinciden
+            b continuar
+
+        match:
+            // Aquí va el código si las cadenas coinciden
+            b cont
+        
+
+
+
 
 
 
@@ -408,48 +486,6 @@ do_memoria:
         ret                // Retornar el valor
 
 
-
-
-
-
-
-
-
-    reiniciar_variables:
-        // Limpiar input1
-        ldr x0, =input1
-        mov w1, #0          // Poner 0 (nulo)
-        mov w2, #10         // Limitar a 10 bytes
-        reset_input1:
-            strb w1, [x0], #1   // Escribir 0 en cada byte del buffer
-            subs w2, w2, #1
-            b.ne reset_input1   // Si aún no hemos escrito en todos los bytes, repetir
-
-            // Limpiar input2
-            ldr x0, =input2
-            mov w2, #10
-        reset_input2:
-            strb w1, [x0], #1
-            subs w2, w2, #1
-            b.ne reset_input2
-
-            // Limpiar result
-            ldr x0, =result
-            mov w2, #12
-        reset_result:
-            strb w1, [x0], #1
-            subs w2, w2, #1
-            b.ne reset_result
-
-            // Limpiar opcion (aunque no es necesario aquí, lo hago por consistencia)
-            ldr x0, =opcion
-            mov w2, #5
-        reset_opcion:
-            strb w1, [x0], #1
-            subs w2, w2, #1
-            b.ne reset_opcion
-
-        b cont
 
 
     reiniciar_variables2:
