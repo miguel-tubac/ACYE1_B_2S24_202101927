@@ -67,6 +67,11 @@
     newline:
         .ascii "\n"
 
+    opcionSalir:
+        .asciz "1. Salir\n"
+        .asciz "2. Regresar\n"
+        lenOpcionSalir = .- opcionSalir
+
 .bss
     opcion:
         .space 5   // => El 5 indica cuantos BYTES se reservaran para la variable opcion
@@ -120,7 +125,7 @@ _start:
         beq operacion_memoria
 
         cmp w10, 54
-        beq end
+        beq salida
 
         b invalido
 
@@ -162,12 +167,8 @@ _start:
             B menu
 
     end:
-        // Mostrar el precionar enter
-        mov x0, 1              // Descriptor de archivo para stdout
-        ldr x1, =msgSalida       // Dirección de nueva línea
-        mov x2, lenMsgSalida             // Tamaño de nueva línea
-        mov x8, 64             // Número de llamada al sistema para write
-        svc 0                  // Llamada al sistema
+        print msgSalida, lenMsgSalida 
+
         input
 
         // Mostrar el precionar enter
@@ -181,6 +182,30 @@ _start:
         MOV x8, 93  // Codigo de la llamada al sistema
         SVC 0       // Ejecutar la llamada al sistema
 
+
+    salida:
+        print clear, lenClear
+        // Mostrar el precionar enter
+        mov x0, 1              // Descriptor de archivo para stdout
+        ldr x1, =newline      // Dirección de nueva línea
+        mov x2, 1            // Tamaño de nueva línea
+        mov x8, 64             // Número de llamada al sistema para write
+        svc 0                  // Llamada al sistema
+        
+        print opcionSalir, lenOpcionSalir
+        print msgOpcion, lenOpcion
+        input
+        
+        LDR x10, =opcion
+        LDRB w10, [x10]
+
+        cmp w10, 49
+        beq end
+
+        cmp w10, 50
+        beq menu
+
+        b salida
 
 
 
