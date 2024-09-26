@@ -201,15 +201,6 @@ do_memoria:
         poner_nulo:
             strb wzr, [x1, x3]           // Reemplazar '\n' con un carácter nulo
 
-        /*fin_remover_nueva_linea:
-            // Mostrar resultado después de limpiar
-            mov x0, 1                    // Descriptor de archivo para stdout
-            ldr x1, =opracionCom          // Dirección del resultado
-            mov x2, 50                   // Tamaño del resultado
-            mov x8, 64                   // Número de llamada al sistema para write
-            svc 0                        // Llamada al sistema*/
-
-
         comparar_cadena:
             ldr x1, =opracionCom         // Cargar la dirección de la cadena ingresada
             ldr x2, =cadena_exit         // Cargar la dirección de la cadena "#202101927-exit"
