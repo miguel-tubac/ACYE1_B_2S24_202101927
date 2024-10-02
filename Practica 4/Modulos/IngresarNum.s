@@ -4,6 +4,7 @@
 .global readCSV
 .global atoi
 .global sepados_comas
+.global reset_variables
 
 .data
     clear:
@@ -112,8 +113,11 @@
 
 .text
 do_numeros:
+    
+
     stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
     mov x29, sp                  // Establecer el frame pointer
+    bl reset_variables
     menuS:
         print clear, lenClear
         print menuPrincipal, lenMenuPrincipal
@@ -292,7 +296,7 @@ sepados_comas:
             BEQ rd_cv_num2       // Si es una coma, saltar a la conversión del número
 
             CMP w3, 10           // Comparar con el salto de línea (ASCII 10)
-            BEQ rd_end2    // Si es un salto de línea, procesar el último número pendiente
+            BEQ retorno_Salto    // Si es un salto de línea, procesar el último número pendiente
 
             MOV x20, x0          // Guardar el estado de retorno en `x20`
             CBZ x0, rd_cv_num2    // Si `x0` es 0, convertir el número
@@ -322,12 +326,21 @@ sepados_comas:
                 BNE cls_num2         // Si no ha alcanzado 3, repetir el ciclo de limpieza
                 LDR x10, =num       // Restaurar la dirección del buffer `num` para continuar leyendo más caracteres
                 CBNZ x20, rd_num2    // Si `x20` no es 0, continuar leyendo más caracteres del archivo
+        
+        retorno_Salto:
+            // Convertir el número pendiente cuando se encuentra una coma
+            LDR x5, =num         // Cargar la dirección del buffer `num`
+            LDR x8, =num         // Cargar la dirección del buffer `num`
+            LDR x12, =array      // Cargar la dirección del array para almacenar los números
+
+            STP x29, x30, [SP, -16]!  // Guardar registros de enlace y base en la pila
+            BL atoi              // Llamar a atoi para convertir la cadena a un entero
+            LDP x29, x30, [SP], 16  // Restaurar registros de enlace y base
 
         rd_end2:
             print salto, lenSalto  // Imprimir el salto de línea
             print readSuccess, lenReadSuccess // Mensaje de éxito
-            RET
-                     // Retornar de la función
+            RET// Retornar de la función
 
 
 
@@ -381,6 +394,31 @@ atoi:
 
             RET                        // Retorna de la función
 
+
+
+// Rutina para reiniciar array y count
+reset_variables:
+    // Reiniciar el array a cero
+    LDR x0, =array      // Cargar la dirección de array
+    MOV x1, 1024      // Tamaño de array en bytes
+    MOV x2, 0          // Valor a almacenar (cero)
+
+    reset_array_loop:
+        STRB w2, [x0], 1   // Almacenar cero en la dirección actual y avanzar
+        SUBS x1, x1, 1     // Decrementar el contador
+        BNE reset_array_loop // Si no ha llegado a cero, repetir
+
+        // Reiniciar count a cero
+        LDR x0, =count      // Cargar la dirección de count
+        MOV x1, 8          // Tamaño de count en bytes
+
+    reset_count_loop:
+        STRB w2, [x0], 1   // Almacenar cero en la dirección actual y avanzar
+        SUBS x1, x1, 1     // Decrementar el contador
+        BNE reset_count_loop // Si no ha llegado a cero, repetir
+
+        // Salir de la rutina
+        RET
 
 
 
