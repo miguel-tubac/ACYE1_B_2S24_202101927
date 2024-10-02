@@ -2,12 +2,14 @@
 
 .extern array
 .extern count
-//.extern num
+
 
 .global bubbleSort
 .global itoa
 .global no_visualizar
-//.global si_visualizar
+
+.global bubbleSort_ConPasos
+.global print_array
 
 .data
     clear:
@@ -146,8 +148,8 @@ do_bubble:
             cmp w10,48
             beq no_visualizar
 
-            /*cmp w10,49
-            bl si_visualizar*/
+            cmp w10,49
+            beq bubbleSort_ConPasos
 
             b cont
 
@@ -211,71 +213,149 @@ no_visualizar:
 
 
 
-/*si_visualizar:
-    bl bubbleSort
+bubbleSort:
+    LDR x0, =count          // Cargar la dirección de la variable count (número de elementos)
+    LDR x0, [x0]            // Cargar el valor de count, es decir, la cantidad de números leídos del archivo CSV
+
+    MOV x1, 0               // Inicializar índice i en 0 (este es el índice externo del algoritmo de ordenamiento burbuja)
+    SUB x0, x0, 1           // Calcular length - 1, que es el número de pasadas necesarias para el algoritmo de burbuja
+
+    bs_loop1:
+        MOV x9, 0               // Inicializar índice j en 0 (este es el índice interno para comparar elementos adyacentes)
+        SUB x2, x0, x1          // Calcular length - 1 - i, lo que reduce el rango de comparación en cada pasada
+
+    bs_loop2:
+        LDR x3, =array          // Cargar la dirección de la variable array (el arreglo de números)
+        LDR w4, [x3, x9, LSL 2] // Cargar el valor de array[j] (primer número a comparar)
+
+        ADD x9, x9, 1           // Incrementar el índice j en 1 para acceder al siguiente elemento
+        LDR w5, [x3, x9, LSL 2] // Cargar el valor de array[j + 1] (segundo número a comparar)
+
+        CMP w4, w5              // Comparar array[j] y array[j + 1]
+        BLT bs_cont_loop2        // Si array[j] < array[j + 1], continuar sin intercambiar (ir a la siguiente iteración)
+
+        STR w4, [x3, x9, LSL 2] // Intercambiar los elementos: almacenar array[j] en la posición array[j + 1]
+        SUB x9, x9, 1           // Retroceder el índice j en 1 para corregir la posición
+        STR w5, [x3, x9, LSL 2] // Almacenar array[j + 1] en la posición array[j]
+        ADD x9, x9, 1           // Incrementar el índice j nuevamente para continuar la iteración
+
+    bs_cont_loop2:
+        CMP x9, x2              // Comparar si el índice j ha alcanzado el límite (length - 1 - i)
+        BNE bs_loop2            // Si no ha alcanzado el límite, repetir el bucle interno (comparar siguiente par de elementos)
+
+        ADD x1, x1, 1           // Incrementar el índice i para la siguiente pasada del algoritmo de burbuja
+        CMP x1, x0              // Comparar si todas las pasadas necesarias han sido completadas
+        BNE bs_loop1            // Si no se ha completado, repetir el bucle externo
+
+        RET                     // Retornar de la función cuando el arreglo esté ordenado
+
+
+bubbleSort_ConPasos:
+    LDR x0, =count          // Cargar la dirección de la variable count (número de elementos)
+    LDR x0, [x0]            // Cargar el valor de count, es decir, la cantidad de números leídos del archivo CSV
+
+    MOV x1, 0               // Inicializar índice i en 0 (este es el índice externo del algoritmo de ordenamiento burbuja)
+    SUB x0, x0, 1           // Calcular length - 1, que es el número de pasadas necesarias para el algoritmo de burbuja
+
+    bs_loop11:
+        MOV x9, 0               // Inicializar índice j en 0 (este es el índice interno para comparar elementos adyacentes)
+        SUB x2, x0, x1          // Calcular length - 1 - i, lo que reduce el rango de comparación en cada pasada
+
+    bs_loop22:
+        LDR x3, =array          // Cargar la dirección de la variable array (el arreglo de números)
+        LDR w4, [x3, x9, LSL 2] // Cargar el valor de array[j] (primer número a comparar)
+
+        ADD x9, x9, 1           // Incrementar el índice j en 1 para acceder al siguiente elemento
+        LDR w5, [x3, x9, LSL 2] // Cargar el valor de array[j + 1] (segundo número a comparar)
+
+        CMP w4, w5              // Comparar array[j] y array[j + 1]
+        BLT bs_cont_loop22        // Si array[j] < array[j + 1], continuar sin intercambiar (ir a la siguiente iteración)
+
+        STR w4, [x3, x9, LSL 2] // Intercambiar los elementos: almacenar array[j] en la posición array[j + 1]
+        SUB x9, x9, 1           // Retroceder el índice j en 1 para corregir la posición
+        STR w5, [x3, x9, LSL 2] // Almacenar array[j + 1] en la posición array[j]
+        ADD x9, x9, 1           // Incrementar el índice j nuevamente para continuar la iteración
+
+    bs_cont_loop22:
+        STP x0, x1, [SP, -16]!   // Guarda los registros x0 y x1 en la pila
+        STP x2, x9, [SP, -16]!  // Guarda los registros x7 y x14 si son utilizados
+        STP x3, x4, [SP, -16]! // Guarda los registros x15 y x30 (incluyendo x30, ya que es el registro de retorno)
+        STP x5, x0, [SP, -16]!
+            //STP x29, x30, [SP, -16]!  // Guardar los registros de enlace y base en la pila
+        // Imprimir el arreglo actual después de cada pasada
+        bl print_array           // Llamar a la rutina para imprimir el arreglo
+        //LDP x29, x30, [SP], 16  // Restaurar los registros de enlace y base desde la pila
+
+        // Restaurar los registros antes de retornar
+        LDP x0, x1, [SP], 16  // Restaurar x15 y x30
+        LDP x2, x9, [SP], 16   // Restaurar x7 y x14
+        LDP x3, x4, [SP], 16    // Restaurar x0 y x1
+        LDP x5, x0, [SP], 16
+        
+
+        CMP x9, x2              // Comparar si el índice j ha alcanzado el límite (length - 1 - i)
+        BNE bs_loop22            // Si no ha alcanzado el límite, repetir el bucle interno (comparar siguiente par de elementos)
+
+
+        ADD x1, x1, 1           // Incrementar el índice i para la siguiente pasada del algoritmo de burbuja
+        CMP x1, x0              // Comparar si todas las pasadas necesarias han sido completadas
+        BNE bs_loop11            // Si no se ha completado, repetir el bucle externo
+
+        RET                     // Retornar de la función cuando el arreglo esté ordenado
+
+
+
+// Rutina para imprimir el contenido del arreglo
+print_array:
+    // Guardar los registros que vas a utilizar
+    STP x0, x1, [SP, -16]!   // Guarda los registros x0 y x1 en la pila
+    STP x7, x14, [SP, -16]!  // Guarda los registros x7 y x14 si son utilizados
+    STP x15, x30, [SP, -16]! // Guarda los registros x15 y x30 (incluyendo x30, ya que es el registro de retorno)*/
+
     // recorrer array y convertir a ascii
-    LDR x9, =count
-    LDR x9, [x9] // length => cantidad de numeros leidos del csv
+    LDR x14, =count
+    LDR x14, [x14] // length => cantidad de numeros leidos del csv
     MOV x7, 0
     LDR x15, =array
 
     print resulta, lenResultado
-    loop_array:
+    loop_array2:
         LDR w0, [x15], 4
         LDR x1, =num
-        BL itoa
 
-        
+        //STP x29, x30, [SP, -16]!  // Guardar los registros de enlace y base en la pila
+        BL itoa
+        //LDP x29, x30, [SP], 16  // Restaurar los registros de enlace y base desde la pila
+
         print espacio, lenEspacio
 
         ADD x7, x7, 1
-        CMP x9, x7
-        BNE loop_array
+        CMP x14, x7
+        BNE loop_array2
 
     print newline, lennewline
-    print precionarEnter, lenPrecionarEnter
-    read 0, filename, 50
-    b menuS*/
+    //print precionarEnter, lenPrecionarEnter
+    //read 0, opcion, 5
+
+    // Restaurar los registros antes de retornar
+    LDP x15, x30, [SP], 16  // Restaurar x15 y x30
+    LDP x7, x14, [SP], 16   // Restaurar x7 y x14
+    LDP x0, x1, [SP], 16    // Restaurar x0 y x1*/
+    
+    ret
 
 
-bubbleSort:
-    LDR x0, =count
-    LDR x0, [x0] // length => cantidad de numeros leidos del csv
 
-    MOV x1, 0 // index i - bubble sort algorithm
-    SUB x0, x0, 1 // length - 1
-
-    bs_loop1:
-        MOV x9, 0 // index j - bubble sort algorithm
-        SUB x2, x0, x1 // length - 1 - i
-
-    bs_loop2:
-        LDR x3, =array
-        LDR w4, [x3, x9, LSL 2] // array[i]
-
-        ADD x9, x9, 1
-        LDR w5, [x3, x9, LSL 2] // array[i + 1]
-
-        CMP w4, w5
-        BLT bs_cont_loop2
-
-        STR w4, [x3, x9, LSL 2]
-        SUB x9, x9, 1
-        STR w5, [x3, x9, LSL 2]
-        ADD x9, x9, 1
-
-    bs_cont_loop2:
-        CMP x9, x2
-        BNE bs_loop2
-
-        ADD x1, x1, 1
-        CMP x1, x0
-        BNE bs_loop1
-
-    RET
 
 
 itoa:
+    // params: x0 => number, x1 => buffer address
+    STP x29, x30, [SP, -16]!      // Guardar registros de enlace y base en la pila
+    MOV x29, SP                   // Establecer nuevo marco de pila
+
+    STP x2, x3, [SP, -16]!        // Guardar registros temporales que vas a usar
+    STP x5, x10, [SP, -16]!
+
     // params: x0 => number, x1 => buffer address
     MOV x10, 0  // contador de digitos a imprimir
     MOV x12, 0  // flag para indicar si hay signo menos
@@ -331,7 +411,13 @@ itoa:
     i_endConversion:
         ADD x10, x10, x12
         print num, x10
+
+
+        LDP x5, x10, [SP], 16         // Restaurar los registros guardados
+        LDP x2, x3, [SP], 16
+        LDP x29, x30, [SP], 16        // Restaurar el marco de pila y el registro de enlace
         RET  //*/
+
 
 
 

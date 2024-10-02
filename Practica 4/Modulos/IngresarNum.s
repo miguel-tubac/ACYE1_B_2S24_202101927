@@ -62,6 +62,10 @@
         .asciz "\nIngrese el nombre del archivo: "
         lenMsgFilename = .- msgFilename
 
+    readSuccess2:
+        .asciz "Los datos se han leido Correctamente\n"
+        lenReadSuccess2 = .- readSuccess2
+
 
 .bss
     .global array   // Agregar esta línea
@@ -215,8 +219,8 @@ openFile:
 
     op_f_error:
         print errorOpenFile, lenErrOpenFile
-        read 0, opcion, 1
-
+        //read 0, opcion, 1
+        b cont
     op_f_end:
         RET
 
@@ -339,7 +343,7 @@ sepados_comas:
 
         rd_end2:
             print salto, lenSalto  // Imprimir el salto de línea
-            print readSuccess, lenReadSuccess // Mensaje de éxito
+            print readSuccess2, lenReadSuccess2 // Mensaje de éxito
             RET// Retornar de la función
 
 
