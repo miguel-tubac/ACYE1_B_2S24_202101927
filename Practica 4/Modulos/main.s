@@ -1,12 +1,7 @@
 .global _start
 .extern do_numeros
 // Declarar las variables como externas
-.extern array
-.extern count
-//.extern num
-
-.global bubbleSort
-.global itoa
+.extern do_bubble
 
 .data
     clear:
@@ -75,16 +70,11 @@
         .asciz "1. Salir\n"
         .asciz "2. Regresar\n"
         lenOpcionSalir = .- opcionSalir
-    
-    espacio:
-        .asciz " "
-        lenEspacio = .- espacio
+
 
 .bss
     opcion:
         .space 5   // => El 5 indica cuantos BYTES se reservaran para la variable opcion
-    num:
-        .space 4
 
 
 /*.macro print texto, cantidad
@@ -164,26 +154,9 @@ _start:
         Bubble_Sort:
             print restaText, lenRestaText
             // Llamar Algoritmo de Ordenamiento Burbuja
-            bl bubbleSort
-            // recorrer array y convertir a ascii
-            LDR x9, =count
-            LDR x9, [x9] // length => cantidad de numeros leidos del csv
-            MOV x7, 0
-            LDR x15, =array
-
-            loop_array:
-                LDRH w0, [x15], 2
-                LDR x1, =num
-                BL itoa
-
-                print espacio, lenEspacio
-
-                ADD x7, x7, 1
-                CMP x9, x7
-                BNE loop_array
-                
-            print newline, lennewline
-            B cont
+            bl do_bubble
+            
+            b cont
 
         Quick_Sort:
             print multiplicacionText, lenMultiplicacionText
@@ -246,100 +219,7 @@ _start:
         b salida
 
 
-bubbleSort:
-    LDR x0, =count
-    LDR x0, [x0] // length => cantidad de numeros leidos del csv
 
-    MOV x1, 0 // index i - bubble sort algorithm
-    SUB x0, x0, 1 // length - 1
-
-    bs_loop1:
-        MOV x9, 0 // index j - bubble sort algorithm
-        SUB x2, x0, x1 // length - 1 - i
-
-        bs_loop2:
-            LDR x3, =array
-            LDRH w4, [x3, x9, LSL 1] // array[i]
-            ADD x9, x9, 1
-            LDRH w5, [x3, x9, LSL 1] // array[i + 1]
-
-            CMP w4, w5
-            BLT bs_cont_loop2
-
-            STRH w4, [x3, x9, LSL 1]
-            SUB x9, x9, 1
-            STRH w5, [x3, x9, LSL 1]
-            ADD x9, x9, 1
-
-            bs_cont_loop2:
-                CMP x9, x2
-                BNE bs_loop2
-
-        ADD x1, x1, 1
-        CMP x1, x0
-        BNE bs_loop1
-
-    RET
-
-
-
-itoa:
-    // params: x0 => number, x1 => buffer address
-    MOV x10, 0  // contador de digitos a imprimir
-    MOV x12, 0  // flag para indicar si hay signo menos
-    MOV w2, 10000  // Base 10
-    CMP w0, 0  // Numero a convertir
-    BGT i_convertirAscii
-    CBZ w0, i_zero
-
-    B i_negative
-
-    i_zero:
-        ADD x10, x10, 1
-        MOV w5, 48
-        STRB w5, [x1], 1
-        B i_endConversion
-
-    i_negative:
-        MOV  x12, 1
-        MOV w5, 45
-        STRB w5, [x1], 1
-        NEG w0, w0
-
-    i_convertirAscii:
-        CBZ w2, i_endConversion
-        UDIV w3, w0, w2
-        CBZ w3, i_reduceBase
-
-        MOV w5, w3
-        ADD w5, w5, 48
-        STRB w5, [x1], 1
-        ADD x10, x10, 1
-
-        MUL w3, w3, w2
-        SUB w0, w0, w3
-
-        CMP w2, 1
-        BLE i_endConversion
-
-        i_reduceBase:
-            MOV w6, 10
-            UDIV w2, w2, w6
-
-            CBNZ w10, i_addZero
-            B i_convertirAscii
-
-        i_addZero:
-            CBNZ w3, i_convertirAscii
-            ADD x10, x10, 1
-            MOV w5, 48
-            STRB w5, [x1], 1
-            B i_convertirAscii
-
-    i_endConversion:
-        ADD x10, x10, x12
-        print num, x10
-        RET
 
 
 

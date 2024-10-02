@@ -3,7 +3,7 @@
 .global closeFile
 .global readCSV
 .global atoi
-.global itoa
+.global sepados_comas
 
 .data
     clear:
@@ -34,7 +34,7 @@
         lenErronea = . - erronea
 
     sumaPorComas:
-        .asciz "\nIngrese los numeros separados por una coma: "
+        .asciz "\nIngrese los numeros separados por comas: "
         lenSumaPorComas = . - sumaPorComas
 
     precionarEnter:
@@ -58,14 +58,13 @@
         lenReadSuccess = .- readSuccess
     
     msgFilename:
-        .asciz "Ingrese el nombre del archivo: "
+        .asciz "\nIngrese el nombre del archivo: "
         lenMsgFilename = .- msgFilename
 
 
 .bss
     .global array   // Agregar esta línea
     .global count   // Agregar esta línea
-    //.global num
 
     opcion:
         .space 5   // => El 5 indica cuantos BYTES se reservaran para la variable opcion
@@ -87,6 +86,9 @@
 
     filename:
         .zero 50
+
+    opracionCom:
+        .zero 1024
 
 
 // Macro para imprimir strings
@@ -146,8 +148,8 @@ do_numeros:
 
         separadosPorComas:
             print sumaComas, lenMultiplicacionText
-            //beq opcion_separados               
-            b cont
+            BL sepados_comas               
+            b end
 
         cargarArchivoSCV:
             print cargacsv, lencargacsv
@@ -225,100 +227,160 @@ closeFile:
 
 readCSV:
     // code para leer numero y convertir
-    LDR x10, =num    // Buffer para almacenar el numero
-    LDR x11, =fileDescriptor
-    LDR x11, [x11]
+    LDR x10, =num            // Cargar la dirección del buffer `num` para almacenar el número leído
+    LDR x11, =fileDescriptor  // Cargar la dirección del descriptor de archivo
+    LDR x11, [x11]           // Cargar el valor del descriptor de archivo
 
     rd_num:
-        read x11, character, 1
-        LDR x4, =character
-        LDRB w3, [x4]
-        CMP w3, 44
-        BEQ rd_cv_num
+        read x11, character, 1  // Leer 1 byte del archivo en el buffer `character`
+        LDR x4, =character      // Cargar la dirección del buffer `character`
+        LDRB w3, [x4]           // Cargar el carácter leído en el registro `w3`
+        CMP w3, 44              // Comparar el carácter leído con el código ASCII de la coma (',')
+        BEQ rd_cv_num           // Si es una coma, saltar a la conversión del número
 
-        MOV x20, x0
-        CBZ x0, rd_cv_num
+        MOV x20, x0             // Guardar el estado de retorno en `x20` para más adelante
+        CBZ x0, rd_cv_num       // Si el valor de `x0` es 0, saltar a la conversión del número
 
-        STRB w3, [x10], 1
-        B rd_num
+        STRB w3, [x10], 1       // Almacenar el carácter leído en el buffer `num` y avanzar
+        B rd_num                // Volver a leer otro carácter
 
     rd_cv_num:
-        LDR x5, =num
-        LDR x8, =num
-        LDR x12, =array
+        LDR x5, =num            // Cargar la dirección del buffer `num`
+        LDR x8, =num            // Cargar nuevamente la dirección del buffer `num` (redundante, puede ser optimizado)
+        LDR x12, =array         // Cargar la dirección del array donde se almacenarán los números convertidos
 
-        STP x29, x30, [SP, -16]!
+        STP x29, x30, [SP, -16]!  // Guardar los registros de enlace y base en la pila
 
-        BL atoi
+        BL atoi                 // Llamar a la función `atoi` para convertir la cadena a un entero
 
-        LDP x29, x30, [SP], 16
+        LDP x29, x30, [SP], 16  // Restaurar los registros de enlace y base desde la pila
 
-        LDR x12, =num
-        MOV w13, 0
-        MOV x14, 0
+        LDR x12, =num           // Cargar la dirección del buffer `num` nuevamente
+        MOV w13, 0              // Inicializar el registro `w13` en 0 para limpiar el buffer `num`
+        MOV x14, 0              // Inicializar el contador `x14` en 0
 
         cls_num:
-            STRB w13, [x12], 1
-            ADD x14, x14, 1
-            CMP x14, 3
-            BNE cls_num
-            LDR x10, =num
-            CBNZ x20, rd_num
+            STRB w13, [x12], 1  // Escribir 0 en la posición actual del buffer `num` para limpiarlo
+            ADD x14, x14, 1     // Incrementar el contador `x14`
+            CMP x14, 3          // Comparar el contador con 3 (para limpiar 3 bytes del buffer)
+            BNE cls_num         // Si no ha alcanzado 3, repetir el ciclo de limpieza
+            LDR x10, =num       // Restaurar la dirección del buffer `num` para continuar leyendo más caracteres
+            CBNZ x20, rd_num    // Si `x20` no es 0, continuar leyendo más caracteres del archivo
 
     rd_end:
-        print salto, lenSalto
-        print readSuccess, lenReadSuccess
-        //read 0, opcion, 2
-        RET
+        print salto, lenSalto          // Imprimir un salto de línea
+        print readSuccess, lenReadSuccess // Imprimir el mensaje de éxito en la lectura
+        //read 0, opcion, 2           // (comentado) Leer opción (posiblemente para otra funcionalidad)
+        RET                           // Retornar de la función
 
 
-atoi:
-    // params: x5, x8 => buffer address, x12 => result address
-    SUB x5, x5, 1
-    a_c_digits:
-        LDRB w7, [x8], 1
-        CBZ w7, a_c_convert
-        CMP w7, 10
-        BEQ a_c_convert
-        B a_c_digits
 
-    a_c_convert:
-        SUB x8, x8, 2
-        MOV x4, 1
-        MOV x9, 0
 
-        a_c_loop:
-            LDRB w7, [x8], -1
-            CMP w7, 45
-            BEQ a_c_negative
+sepados_comas:
+        // Imprimir el primer mensaje
+        print sumaPorComas, lenSumaPorComas
+        read 0, opracionCom, 1024 // Leer la operación completa
 
-            SUB w7, w7, 48
-            MUL w7, w7, w4
-            ADD w9, w9, w7
+        LDR x10, =num            // Cargar la dirección del buffer `num` para almacenar el número leído
+        LDR x4, =opracionCom   // Cargar la dirección de la cadena de entrada
+        MOV x11, x4            // Mover la dirección base a x11
+        MOV x15, 1024          // Tamaño máximo de la entrada
 
-            MOV w6, 10
-            MUL w4, w4, w6
+        rd_num2:
+            LDRB w3, [x11], 1    // Leer un byte (carácter) desde `opracionCom` y avanzar el puntero
+            CMP w3, 44           // Comparar el carácter leído con la coma (ASCII 44)
+            BEQ rd_cv_num2       // Si es una coma, saltar a la conversión del número
 
-            CMP x8, x5
-            BNE a_c_loop
-            B a_c_end
+            CMP w3, 10           // Comparar con el salto de línea (ASCII 10)
+            BEQ rd_end2    // Si es un salto de línea, procesar el último número pendiente
 
-        a_c_negative:
-            NEG w9, w9
+            MOV x20, x0          // Guardar el estado de retorno en `x20`
+            CBZ x0, rd_cv_num2    // Si `x0` es 0, convertir el número
 
-        a_c_end:
-            LDR x13, =count
-            LDR x13, [x13] // saltos
-            MOV x14, 2
-            MUL x14, x13, x14
+            STRB w3, [x10], 1    // Almacenar el carácter leído en el buffer `num` y avanzar el puntero
+            B rd_num2            // Volver a leer otro carácter
 
-            STRH w9, [x12, x14] // usando 16 bits
+        rd_cv_num2:
+            // Convertir el número pendiente cuando se encuentra una coma
+            LDR x5, =num         // Cargar la dirección del buffer `num`
+            LDR x8, =num         // Cargar la dirección del buffer `num`
+            LDR x12, =array      // Cargar la dirección del array para almacenar los números
 
-            ADD x13, x13, 1
-            LDR x12, =count
-            STR x13, [x12]
+            STP x29, x30, [SP, -16]!  // Guardar registros de enlace y base en la pila
+            BL atoi              // Llamar a atoi para convertir la cadena a un entero
+            LDP x29, x30, [SP], 16  // Restaurar registros de enlace y base
 
+            // Limpiar el buffer `num` para la próxima lectura
+            LDR x12, =num           // Cargar la dirección del buffer `num` nuevamente
+            MOV w13, 0           // Limpiar el buffer `num`
+            MOV x14, 0           // Inicializar el contador
+
+            cls_num2:
+                STRB w13, [x12], 1  // Escribir 0 en la posición actual del buffer `num` para limpiarlo
+                ADD x14, x14, 1     // Incrementar el contador `x14`
+                CMP x14, 3          // Comparar el contador con 3 (para limpiar 3 bytes del buffer)
+                BNE cls_num2         // Si no ha alcanzado 3, repetir el ciclo de limpieza
+                LDR x10, =num       // Restaurar la dirección del buffer `num` para continuar leyendo más caracteres
+                CBNZ x20, rd_num2    // Si `x20` no es 0, continuar leyendo más caracteres del archivo
+
+        rd_end2:
+            print salto, lenSalto  // Imprimir el salto de línea
+            print readSuccess, lenReadSuccess // Mensaje de éxito
             RET
+                     // Retornar de la función
+
+
+
+// Función para convertir una cadena ASCII a entero con la validación de signos
+atoi:
+    // Parámetros: x5 = dirección del buffer, x8 = dirección donde se comenzará a leer, x12 = dirección del resultado
+    SUB x5, x5, 1                  // Ajusta el puntero del buffer restando 1 para empezar desde el último carácter válido
+    a_c_digits:                     // Etiqueta para el inicio de la lectura de dígitos
+        LDRB w7, [x8], 1            // Carga un byte (carácter) del buffer en w7 y avanza el puntero x8
+        CBZ w7, a_c_convert          // Si el byte leído es 0 (fin de cadena), salta a la conversión
+        CMP w7, 10                   // Compara el carácter leído con el salto de línea (ASCII 10)
+        BEQ a_c_convert              // Si es un salto de línea, salta a la conversión
+        B a_c_digits                 // Repite la lectura de dígitos
+
+    a_c_convert:                     // Etiqueta para la conversión de la cadena a entero
+        SUB x8, x8, 2                // Ajusta el puntero para que apunte al último carácter leído
+        MOV x4, 1                    // Inicializa el multiplicador para la conversión (10^0)
+        MOV w9, 0                    // Inicializa el resultado acumulado en w9 a 0
+
+        a_c_loop:                    // Etiqueta para el bucle de conversión
+            LDRB w7, [x8], -1        // Lee el carácter anterior del buffer y retrocede el puntero
+            CMP w7, 45               // Compara el carácter con el signo negativo (ASCII 45)
+            BEQ a_c_negative         // Si es un signo negativo, salta a la lógica para manejarlo
+
+            SUB w7, w7, 48           // Convierte el carácter ASCII a número (ASCII 0 es 48)
+            MUL w7, w7, w4           // Multiplica el dígito por el multiplicador actual (10^n)
+            ADD w9, w9, w7           // Suma el resultado al total acumulado
+
+            MOV w6, 10                // Carga el valor 10 en w6
+            MUL w4, w4, w6            // Multiplica el multiplicador por 10 para la siguiente posición
+
+            CMP x8, x5                // Compara el puntero actual con el inicio del buffer
+            BNE a_c_loop              // Si no hemos llegado al inicio, repite el bucle
+
+            B a_c_end                 // Salta al final de la función
+
+        a_c_negative:                 // Etiqueta para manejar el caso negativo
+            NEG w9, w9                // Negar el resultado acumulado para convertirlo a negativo
+
+        a_c_end:                      // Etiqueta para el final de la función
+            LDR x13, =count           // Carga la dirección de la variable de conteo
+            LDR x13, [x13]            // Carga el valor actual de saltos
+            MOV x14, 4                // Inicializa x14 para el desplazamiento del resultado
+            MUL x14, x13, x14          // Multiplica el conteo por 4 para calcular el desplazamiento en bytes
+
+            STR w9, [x12, x14]        // Almacena el resultado en la dirección de resultado ajustada por el desplazamiento
+
+            ADD x13, x13, 1           // Incrementa el contador de saltos
+            LDR x12, =count            // Carga nuevamente la dirección de la variable de conteo
+            STR x13, [x12]            // Almacena el nuevo valor del contador de saltos
+
+            RET                        // Retorna de la función
+
 
 
 
