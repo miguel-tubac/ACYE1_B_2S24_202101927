@@ -87,7 +87,7 @@
     opcion:
         .space 5   // => El 5 indica cuantos BYTES se reservaran para la variable opcion
     num:
-        .space 4
+        .space 50
 
     filename:
         .zero 50
@@ -96,7 +96,7 @@
         .space 5
 
     num1:
-        .space 4
+        .space 50
 
     array2:
         .skip 1024
@@ -307,7 +307,7 @@ bubbleSort_ConPasos:
         CMP x9, x2              // Comparar si el índice j ha alcanzado el límite (length - 1 - i)
         BNE bs_loop22            // Si no ha alcanzado el límite, repetir el bucle interno (comparar siguiente par de elementos)
 
-        ADD x11, x11 , 1
+        ADD x11, x11 , 1 //x11 ++
         bl print_array           // Llamar a la rutina para imprimir el arreglo
         
         ADD x1, x1, 1           // Incrementar el índice i para la siguiente pasada del algoritmo de burbuja
@@ -405,7 +405,6 @@ copy_array2:
         RET
 
 
-
 itoa:
     // params: x0 => number, x1 => buffer address
     MOV x10, 0  // contador de digitos a imprimir
@@ -463,9 +462,7 @@ itoa:
         ADD x10, x10, x12
         //print num, x10
 
-    RET  
-
-
+    RET  //
 
 
 

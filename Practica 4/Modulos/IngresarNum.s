@@ -75,10 +75,10 @@
         .space 5   // => El 5 indica cuantos BYTES se reservaran para la variable opcion
 
     fileDescriptor:
-        .space 8
+        .space 50
 
     num:
-        .space 4
+        .space 50
     
     array:
         .skip 1024
@@ -87,7 +87,7 @@
         .byte 0
 
     count:
-        .zero 8
+        .zero 50
 
     filename:
         .zero 50
@@ -118,7 +118,6 @@
 .text
 do_numeros:
     
-
     stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
     mov x29, sp                  // Establecer el frame pointer
     bl reset_variables
@@ -273,26 +272,17 @@ readCSV:
         cls_num:
             STRB w13, [x12], 1  // Escribir 0 en la posición actual del buffer `num` para limpiarlo
             ADD x14, x14, 1     // Incrementar el contador `x14`
-            CMP x14, 3          // Comparar el contador con 3 (para limpiar 3 bytes del buffer)
+            CMP x14, 6          // Comparar el contador con 3 (para limpiar 3 bytes del buffer)
             BNE cls_num         // Si no ha alcanzado 3, repetir el ciclo de limpieza
             LDR x10, =num       // Restaurar la dirección del buffer `num` para continuar leyendo más caracteres
             CBNZ x20, rd_num    // Si `x20` no es 0, continuar leyendo más caracteres del archivo
     
     retorno_Salto1:
-        /*// Convertir el número pendiente cuando se encuentra una coma
-        LDR x5, =num         // Cargar la dirección del buffer `num`
-        LDR x8, =num         // Cargar la dirección del buffer `num`
-        LDR x12, =array      // Cargar la dirección del array para almacenar los números
-
-        STP x29, x30, [SP, -16]!  // Guardar registros de enlace y base en la pila
-        BL atoi              // Llamar a atoi para convertir la cadena a un entero
-        LDP x29, x30, [SP], 16  // Restaurar registros de enlace y base*/
         CBNZ x20, rd_cv_num 
 
     rd_end:
         print salto, lenSalto          // Imprimir un salto de línea
         print readSuccess, lenReadSuccess // Imprimir el mensaje de éxito en la lectura
-        //read 0, opcion, 2           // (comentado) Leer opción (posiblemente para otra funcionalidad)
         RET                           // Retornar de la función
 
 
@@ -340,7 +330,7 @@ sepados_comas:
             cls_num2:
                 STRB w13, [x12], 1  // Escribir 0 en la posición actual del buffer `num` para limpiarlo
                 ADD x14, x14, 1     // Incrementar el contador `x14`
-                CMP x14, 3          // Comparar el contador con 3 (para limpiar 3 bytes del buffer)
+                CMP x14, 6          // Comparar el contador con 3 (para limpiar 3 bytes del buffer)
                 BNE cls_num2         // Si no ha alcanzado 3, repetir el ciclo de limpieza
                 LDR x10, =num       // Restaurar la dirección del buffer `num` para continuar leyendo más caracteres
                 CBNZ x20, rd_num2    // Si `x20` no es 0, continuar leyendo más caracteres del archivo
@@ -437,8 +427,6 @@ reset_variables:
 
         // Salir de la rutina
         RET
-
-
 
 
 
