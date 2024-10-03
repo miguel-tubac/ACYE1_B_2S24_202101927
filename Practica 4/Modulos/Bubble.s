@@ -11,6 +11,9 @@
 .global bubbleSort_ConPasos
 .global print_array
 
+.global copy_array
+.global copy_array2
+
 .data
     clear:
         .asciz "\x1B[2J\x1B[H"
@@ -40,11 +43,11 @@
         lenErronea = . - erronea
 
     precionarEnter:
-        .asciz "\n\nPresione Enter para continuar..."
+        .asciz "\n\n...Presione enter para continuar..."
         lenPrecionarEnter = . - precionarEnter
 
     regresandoInicio:
-        .asciz "\n...Presione Enter para regresar..."
+        .asciz "\n...Presione enter para regresar..."
         lenRegresandoInicio = . - regresandoInicio
 
     visualizar:
@@ -67,6 +70,18 @@
         .asciz "\nResultado: "
         lenResultado = . - resulta
 
+    pasosim:
+        .asciz "\nPaso "
+        lenpasosim = . -pasosim
+
+    dospuntos:
+        .asciz " : "
+        lendospuntos = . - dospuntos
+    
+    conjInicial: 
+        .asciz "\nConjunto inicial: "
+        lenconjInicial = . - conjInicial
+
 
 .bss
     opcion:
@@ -79,6 +94,12 @@
     
     opcion2:
         .space 5
+
+    num1:
+        .space 4
+
+    array2:
+        .skip 1024
 
 
 // Macro para imprimir strings
@@ -104,6 +125,8 @@
 do_bubble:
     stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
     mov x29, sp                  // Establecer el frame pointer
+
+    bl copy_array
     menuS:
         print clear, lenClear
         print menuPrincipal, lenMenuPrincipal
@@ -137,6 +160,7 @@ do_bubble:
             b cont
 
         acendente:
+            bl copy_array2
             print sumaComas, lenMultiplicacionText
             //beq opcion_separados 
             
@@ -151,9 +175,10 @@ do_bubble:
             cmp w10,49
             beq bubbleSort_ConPasos
 
-            b cont
+            b invalido
 
         decendente:
+            bl copy_array2
             print cargacsv, lencargacsv
             // Imprimir mensaje para ingresar el nombre del archivo
             print visualizar, lenvisualizar              
@@ -167,7 +192,7 @@ do_bubble:
             cmp w10,49
             bl si_visualizar*/
             
-            b cont
+            b invalido
         cont:
             read 0, filename, 50
             b menuS
@@ -198,7 +223,7 @@ no_visualizar:
         LDR x1, =num
         BL itoa
 
-        
+        print num, x10
         print espacio, lenEspacio
 
         ADD x7, x7, 1
@@ -251,6 +276,8 @@ bubbleSort:
 
 
 bubbleSort_ConPasos:
+    MOV x11, 0                      // Inicializar contador
+    bl print_array           // Llamar a la rutina para imprimir el arreglo
     LDR x0, =count          // Cargar la dirección de la variable count (número de elementos)
     LDR x0, [x0]            // Cargar el valor de count, es decir, la cantidad de números leídos del archivo CSV
 
@@ -277,85 +304,109 @@ bubbleSort_ConPasos:
         ADD x9, x9, 1           // Incrementar el índice j nuevamente para continuar la iteración
 
     bs_cont_loop22:
-        STP x0, x1, [SP, -16]!   // Guarda los registros x0 y x1 en la pila
-        STP x2, x9, [SP, -16]!  // Guarda los registros x7 y x14 si son utilizados
-        STP x3, x4, [SP, -16]! // Guarda los registros x15 y x30 (incluyendo x30, ya que es el registro de retorno)
-        STP x5, x0, [SP, -16]!
-            //STP x29, x30, [SP, -16]!  // Guardar los registros de enlace y base en la pila
-        // Imprimir el arreglo actual después de cada pasada
-        bl print_array           // Llamar a la rutina para imprimir el arreglo
-        //LDP x29, x30, [SP], 16  // Restaurar los registros de enlace y base desde la pila
-
-        // Restaurar los registros antes de retornar
-        LDP x0, x1, [SP], 16  // Restaurar x15 y x30
-        LDP x2, x9, [SP], 16   // Restaurar x7 y x14
-        LDP x3, x4, [SP], 16    // Restaurar x0 y x1
-        LDP x5, x0, [SP], 16
-        
-
         CMP x9, x2              // Comparar si el índice j ha alcanzado el límite (length - 1 - i)
         BNE bs_loop22            // Si no ha alcanzado el límite, repetir el bucle interno (comparar siguiente par de elementos)
 
-
+        ADD x11, x11 , 1
+        bl print_array           // Llamar a la rutina para imprimir el arreglo
+        
         ADD x1, x1, 1           // Incrementar el índice i para la siguiente pasada del algoritmo de burbuja
         CMP x1, x0              // Comparar si todas las pasadas necesarias han sido completadas
         BNE bs_loop11            // Si no se ha completado, repetir el bucle externo
 
-        RET                     // Retornar de la función cuando el arreglo esté ordenado
+        print newline, lennewline
+        print precionarEnter, lenPrecionarEnter
+        read 0, filename, 50
+        b menuS
 
 
 
-// Rutina para imprimir el contenido del arreglo
 print_array:
-    // Guardar los registros que vas a utilizar
-    STP x0, x1, [SP, -16]!   // Guarda los registros x0 y x1 en la pila
-    STP x7, x14, [SP, -16]!  // Guarda los registros x7 y x14 si son utilizados
-    STP x15, x30, [SP, -16]! // Guarda los registros x15 y x30 (incluyendo x30, ya que es el registro de retorno)*/
+    STP x29, x30, [sp, #-16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
+    MOV x29, sp                    // Actualizar el Frame Pointer al valor de sp
+    STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
+    STP x9, x10, [sp, #-16]!       // Guardar registros adicionales
+    STP x2, x3, [sp, #-16]!        // Guardar x2 y x3 (usados para itoa)
+    STP x4, x5, [sp, #-16]!        // Guardar x4 y x5 (si se usan en itoa o la rutina actual)
 
-    // recorrer array y convertir a ascii
-    LDR x14, =count
-    LDR x14, [x14] // length => cantidad de numeros leidos del csv
-    MOV x7, 0
-    LDR x15, =array
+    LDR x14, =count                // Cargar el valor de count (número de elementos)
+    LDR x14, [x14]                 // Leer cantidad de números leídos del CSV
+    MOV x7, 0                      // Inicializar contador
+    LDR x15, =array                // Cargar la dirección del array
 
-    print resulta, lenResultado
+    CMP x11, 0
+    beq inciando
+
+    print pasosim, lenpasosim
+    MOV x0, x11
+    LDR x1, =num1
+    BL itoa                        // Llamada a itoa para convertir el número
+    print num1, x10
+    print dospuntos, lendospuntos
+    b loop_array2
+
+    inciando:
+        print conjInicial, lenconjInicial
+
     loop_array2:
-        LDR w0, [x15], 4
-        LDR x1, =num
+        LDR w0, [x15], 4               // Cargar siguiente valor del array (elemento de 32 bits)
+        LDR x1, =num                   // Apuntar el buffer a la cadena "num"
 
-        //STP x29, x30, [SP, -16]!  // Guardar los registros de enlace y base en la pila
-        BL itoa
-        //LDP x29, x30, [SP], 16  // Restaurar los registros de enlace y base desde la pila
+        BL itoa                        // Llamada a itoa para convertir el número
+        print num, x10
+        print espacio, lenEspacio      // Imprimir espacio entre los números
 
-        print espacio, lenEspacio
+        ADD x7, x7, 1                  // Incrementar el contador
+        CMP x14, x7                    // Comparar el contador con el número total
+        BNE loop_array2                // Si no se ha terminado, repetir
 
-        ADD x7, x7, 1
-        CMP x14, x7
-        BNE loop_array2
-
+        // Imprimir nueva línea
     print newline, lennewline
-    //print precionarEnter, lenPrecionarEnter
-    //read 0, opcion, 5
 
-    // Restaurar los registros antes de retornar
-    LDP x15, x30, [SP], 16  // Restaurar x15 y x30
-    LDP x7, x14, [SP], 16   // Restaurar x7 y x14
-    LDP x0, x1, [SP], 16    // Restaurar x0 y x1*/
-    
-    ret
+    LDP x4, x5, [sp], #16          // Restaurar x4 y x5
+    LDP x2, x3, [sp], #16          // Restaurar x2 y x3
+    LDP x9, x10, [sp], #16         // Restaurar x9 y x10
+    LDP x0, x1, [sp], #16          // Restaurar x0 y x1
+    LDP x29, x30, [sp], #16        // Restaurar Frame Pointer y Link Register
+
+    ret                            // Retornar de la función
 
 
+copy_array:
+    // Asumimos que array y array2 tienen el mismo tamaño (1024 bytes)
+    LDR x0, =array      // Cargar la dirección de 'array' en x0
+    LDR x1, =array2     // Cargar la dirección de 'array2' en x1
+    MOV x2, 1024        // Tamaño del array (1024 bytes)
+
+    copy_loop:
+        LDRB w3, [x0], 1    // Cargar byte desde 'array' en w3 y avanzar x0
+        STRB w3, [x1], 1    // Almacenar byte en 'array2' y avanzar x1
+        SUBS x2, x2, 1      // Decrementar el contador de bytes
+        BNE copy_loop       // Repetir hasta copiar todos los bytes
+
+        // Fin de la rutina
+        RET
+
+
+
+copy_array2:
+    // Asumimos que array y array2 tienen el mismo tamaño (1024 bytes)
+    LDR x0, =array2      // Cargar la dirección de 'array2' en x0
+    LDR x1, =array     // Cargar la dirección de 'array' en x1
+    MOV x2, 1024        // Tamaño del array (1024 bytes)
+
+    copy_loop2:
+        LDRB w3, [x0], 1    // Cargar byte desde 'array2' en w3 y avanzar x0
+        STRB w3, [x1], 1    // Almacenar byte en 'array' y avanzar x1
+        SUBS x2, x2, 1      // Decrementar el contador de bytes
+        BNE copy_loop2       // Repetir hasta copiar todos los bytes
+
+        // Fin de la rutina
+        RET
 
 
 
 itoa:
-    // params: x0 => number, x1 => buffer address
-    STP x29, x30, [SP, -16]!      // Guardar registros de enlace y base en la pila
-    MOV x29, SP                   // Establecer nuevo marco de pila
-
-    STP x2, x3, [SP, -16]!        // Guardar registros temporales que vas a usar
-    STP x5, x10, [SP, -16]!
-
     // params: x0 => number, x1 => buffer address
     MOV x10, 0  // contador de digitos a imprimir
     MOV x12, 0  // flag para indicar si hay signo menos
@@ -410,13 +461,9 @@ itoa:
 
     i_endConversion:
         ADD x10, x10, x12
-        print num, x10
+        //print num, x10
 
-
-        LDP x5, x10, [SP], 16         // Restaurar los registros guardados
-        LDP x2, x3, [SP], 16
-        LDP x29, x30, [SP], 16        // Restaurar el marco de pila y el registro de enlace
-        RET  //*/
+    RET  
 
 
 

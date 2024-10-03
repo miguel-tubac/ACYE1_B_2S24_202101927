@@ -55,7 +55,7 @@
         lenSalto = .- salto
 
     readSuccess:
-        .asciz "El Archivo Se Ha Leido Correctamente\n"
+        .asciz "¡¡El archivo se ha leido correctamente!!\n"
         lenReadSuccess = .- readSuccess
     
     msgFilename:
@@ -246,6 +246,9 @@ readCSV:
         CMP w3, 44              // Comparar el carácter leído con el código ASCII de la coma (',')
         BEQ rd_cv_num           // Si es una coma, saltar a la conversión del número
 
+        CMP w3, 10           // Comparar con el salto de línea (ASCII 10)
+        BEQ retorno_Salto1    // Si es un salto de línea, procesar el último número pendiente
+
         MOV x20, x0             // Guardar el estado de retorno en `x20` para más adelante
         CBZ x0, rd_cv_num       // Si el valor de `x0` es 0, saltar a la conversión del número
 
@@ -274,6 +277,17 @@ readCSV:
             BNE cls_num         // Si no ha alcanzado 3, repetir el ciclo de limpieza
             LDR x10, =num       // Restaurar la dirección del buffer `num` para continuar leyendo más caracteres
             CBNZ x20, rd_num    // Si `x20` no es 0, continuar leyendo más caracteres del archivo
+    
+    retorno_Salto1:
+        /*// Convertir el número pendiente cuando se encuentra una coma
+        LDR x5, =num         // Cargar la dirección del buffer `num`
+        LDR x8, =num         // Cargar la dirección del buffer `num`
+        LDR x12, =array      // Cargar la dirección del array para almacenar los números
+
+        STP x29, x30, [SP, -16]!  // Guardar registros de enlace y base en la pila
+        BL atoi              // Llamar a atoi para convertir la cadena a un entero
+        LDP x29, x30, [SP], 16  // Restaurar registros de enlace y base*/
+        CBNZ x20, rd_cv_num 
 
     rd_end:
         print salto, lenSalto          // Imprimir un salto de línea
