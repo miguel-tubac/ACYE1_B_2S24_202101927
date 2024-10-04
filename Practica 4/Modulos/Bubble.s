@@ -5,14 +5,14 @@
 
 
 .global bubbleSort
-.global itoa
-.global no_visualizar
+//.global itoa
+//.global no_visualizar
 
 .global bubbleSort_ConPasos
 .global print_array
 
-.global copy_array
-.global copy_array2
+//.global copy_array
+//.global copy_array2
 
 .global bubbleSort_desendente
 .global no_visualizar1

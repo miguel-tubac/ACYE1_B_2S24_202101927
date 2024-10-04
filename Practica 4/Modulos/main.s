@@ -2,6 +2,7 @@
 .extern do_numeros
 // Declarar las variables como externas
 .extern do_bubble
+.extern do_quick
 
 .data
     clear:
@@ -160,7 +161,7 @@ _start:
 
         Quick_Sort:
             print multiplicacionText, lenMultiplicacionText
-            //bl do_mul
+            bl do_quick
             B cont
 
         Insertion_Sort:
