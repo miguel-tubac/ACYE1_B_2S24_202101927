@@ -14,6 +14,11 @@
 .global copy_array
 .global copy_array2
 
+.global bubbleSort_desendente
+.global no_visualizar1
+.global bubbleSort_desendenteConPasos
+.global print_array2
+
 .data
     clear:
         .asciz "\x1B[2J\x1B[H"
@@ -31,7 +36,7 @@
         lenOpcion = .- msgOpcion
 
     sumaComas:
-        .asciz "\n...Ingresando Ordenamiento de manera Acendente...\n"
+        .asciz "...Ingresando Ordenamiento de manera Acendente...\n"
         lenMultiplicacionText = . - sumaComas
 
     cargacsv:
@@ -39,7 +44,7 @@
         lencargacsv = . - cargacsv
 
     erronea:
-        .asciz "\nOpción no válida, intenta de nuevo..."
+        .asciz "\n...Opción no válida, intenta de nuevo..."
         lenErronea = . - erronea
 
     precionarEnter:
@@ -53,10 +58,6 @@
     visualizar:
         .asciz "\nIngrese 1 si deceas ver los pasos y 0 si no: "
         lenvisualizar = . - visualizar
-    
-    salto:
-        .asciz "\n"
-        lenSalto = .- salto
     
     espacio:
         .asciz " "
@@ -186,11 +187,11 @@ do_bubble:
             LDR x10, =opcion
             LDRB w10, [x10]
 
-            /*cmp w10,48
-            bl no_visualizar
+            cmp w10,48
+            beq no_visualizar1
 
             cmp w10,49
-            bl si_visualizar*/
+            beq bubbleSort_desendenteConPasos
             
             b invalido
         cont:
@@ -211,6 +212,7 @@ do_bubble:
 
 no_visualizar:
     bl bubbleSort
+    //bl bubbleSort_desendente
     // recorrer array y convertir a ascii
     LDR x9, =count
     LDR x9, [x9] // length => cantidad de numeros leidos del csv
@@ -234,8 +236,6 @@ no_visualizar:
     print precionarEnter, lenPrecionarEnter
     read 0, filename, 50
     b menuS
-
-
 
 
 bubbleSort:
@@ -370,6 +370,176 @@ print_array:
     LDP x29, x30, [sp], #16        // Restaurar Frame Pointer y Link Register
 
     ret                            // Retornar de la función
+
+
+no_visualizar1:
+    bl bubbleSort_desendente
+    // recorrer array y convertir a ascii
+    LDR x9, =count
+    LDR x9, [x9] // length => cantidad de numeros leidos del csv
+    MOV x7, 0
+    LDR x15, =array
+
+    print resulta, lenResultado
+    loop_arrays:
+        LDR w0, [x15], 4
+        LDR x1, =num
+        BL itoa
+
+        print num, x10
+        print espacio, lenEspacio
+
+        ADD x7, x7, 1
+        CMP x9, x7
+        BNE loop_arrays
+
+    print newline, lennewline
+    print precionarEnter, lenPrecionarEnter
+    read 0, filename, 50
+    b menuS
+
+
+
+
+bubbleSort_desendente: 
+    LDR x0, =count          // Cargar la dirección de la variable count (número de elementos)
+    LDR x0, [x0]            // Cargar el valor de count, es decir, la cantidad de números leídos del archivo CSV
+
+    MOV x1, 0               // Inicializar índice i en 0 (este es el índice externo del algoritmo de ordenamiento burbuja)
+    SUB x0, x0, 1           // Calcular length - 1, que es el número de pasadas necesarias para el algoritmo de burbuja
+
+    bs_loop4:
+        MOV x9, 0               // Inicializar índice j en 0 (este es el índice interno para comparar elementos adyacentes)
+        SUB x2, x0, x1          // Calcular length - 1 - i, lo que reduce el rango de comparación en cada pasada
+
+    bs_loop5:
+        LDR x3, =array          // Cargar la dirección de la variable array (el arreglo de números)
+        LDR w4, [x3, x9, LSL 2] // Cargar el valor de array[j] (primer número a comparar)
+
+        ADD x9, x9, 1           // Incrementar el índice j en 1 para acceder al siguiente elemento
+        LDR w5, [x3, x9, LSL 2] // Cargar el valor de array[j + 1] (segundo número a comparar)
+
+        CMP w4, w5              // Comparar array[j] y array[j + 1]
+        BGT bs_cont_loop44        // Si array[j] > array[j + 1], continuar sin intercambiar (ir a la siguiente iteración)
+
+        STR w4, [x3, x9, LSL 2] // Intercambiar los elementos: almacenar array[j] en la posición array[j + 1]
+        SUB x9, x9, 1           // Retroceder el índice j en 1 para corregir la posición
+        STR w5, [x3, x9, LSL 2] // Almacenar array[j + 1] en la posición array[j]
+        ADD x9, x9, 1           // Incrementar el índice j nuevamente para continuar la iteración
+
+    bs_cont_loop44:
+        CMP x9, x2              // Comparar si el índice j ha alcanzado el límite (length - 1 - i)
+        BNE bs_loop5            // Si no ha alcanzado el límite, repetir el bucle interno (comparar siguiente par de elementos)
+
+        ADD x1, x1, 1           // Incrementar el índice i para la siguiente pasada del algoritmo de burbuja
+        CMP x1, x0              // Comparar si todas las pasadas necesarias han sido completadas
+        BNE bs_loop4            // Si no se ha completado, repetir el bucle externo
+
+        RET                     // Retornar de la función cuando el arreglo esté ordenado
+
+
+
+
+bubbleSort_desendenteConPasos: 
+    MOV x11, 0                      // Inicializar contador
+    bl print_array2           // Llamar a la rutina para imprimir el arreglo
+    LDR x0, =count          // Cargar la dirección de la variable count (número de elementos)
+    LDR x0, [x0]            // Cargar el valor de count, es decir, la cantidad de números leídos del archivo CSV
+
+    MOV x1, 0               // Inicializar índice i en 0 (este es el índice externo del algoritmo de ordenamiento burbuja)
+    SUB x0, x0, 1           // Calcular length - 1, que es el número de pasadas necesarias para el algoritmo de burbuja
+
+    bs_loop44:
+        MOV x9, 0               // Inicializar índice j en 0 (este es el índice interno para comparar elementos adyacentes)
+        SUB x2, x0, x1          // Calcular length - 1 - i, lo que reduce el rango de comparación en cada pasada
+
+    bs_loop55:
+        LDR x3, =array          // Cargar la dirección de la variable array (el arreglo de números)
+        LDR w4, [x3, x9, LSL 2] // Cargar el valor de array[j] (primer número a comparar)
+
+        ADD x9, x9, 1           // Incrementar el índice j en 1 para acceder al siguiente elemento
+        LDR w5, [x3, x9, LSL 2] // Cargar el valor de array[j + 1] (segundo número a comparar)
+
+        CMP w4, w5              // Comparar array[j] y array[j + 1]
+        BGT bs_cont_loop444        // Si array[j] > array[j + 1], continuar sin intercambiar (ir a la siguiente iteración)
+
+        STR w4, [x3, x9, LSL 2] // Intercambiar los elementos: almacenar array[j] en la posición array[j + 1]
+        SUB x9, x9, 1           // Retroceder el índice j en 1 para corregir la posición
+        STR w5, [x3, x9, LSL 2] // Almacenar array[j + 1] en la posición array[j]
+        ADD x9, x9, 1           // Incrementar el índice j nuevamente para continuar la iteración
+
+    bs_cont_loop444:
+        CMP x9, x2              // Comparar si el índice j ha alcanzado el límite (length - 1 - i)
+        BNE bs_loop55            // Si no ha alcanzado el límite, repetir el bucle interno (comparar siguiente par de elementos)
+
+        ADD x11, x11 , 1 //x11 ++
+        bl print_array2           // Llamar a la rutina para imprimir el arreglo
+
+        ADD x1, x1, 1           // Incrementar el índice i para la siguiente pasada del algoritmo de burbuja
+        CMP x1, x0              // Comparar si todas las pasadas necesarias han sido completadas
+        BNE bs_loop44            // Si no se ha completado, repetir el bucle externo
+
+        print newline, lennewline
+        print precionarEnter, lenPrecionarEnter
+        read 0, filename, 50
+        b menuS
+
+
+print_array2:
+    STP x29, x30, [sp, #-16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
+    MOV x29, sp                    // Actualizar el Frame Pointer al valor de sp
+    STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
+    STP x9, x10, [sp, #-16]!       // Guardar registros adicionales
+    STP x2, x3, [sp, #-16]!        // Guardar x2 y x3 (usados para itoa)
+    STP x4, x5, [sp, #-16]!        // Guardar x4 y x5 (si se usan en itoa o la rutina actual)
+
+    LDR x14, =count                // Cargar el valor de count (número de elementos)
+    LDR x14, [x14]                 // Leer cantidad de números leídos del CSV
+    MOV x7, 0                      // Inicializar contador
+    LDR x15, =array                // Cargar la dirección del array
+
+    CMP x11, 0
+    beq inciando1
+
+    print pasosim, lenpasosim
+    MOV x0, x11
+    LDR x1, =num1
+    BL itoa                        // Llamada a itoa para convertir el número
+    print num1, x10
+    print dospuntos, lendospuntos
+    b loop_array22
+
+    inciando1:
+        print conjInicial, lenconjInicial
+
+    loop_array22:
+        LDR w0, [x15], 4               // Cargar siguiente valor del array (elemento de 32 bits)
+        LDR x1, =num                   // Apuntar el buffer a la cadena "num"
+
+        BL itoa                        // Llamada a itoa para convertir el número
+        print num, x10
+        print espacio, lenEspacio      // Imprimir espacio entre los números
+
+        ADD x7, x7, 1                  // Incrementar el contador
+        CMP x14, x7                    // Comparar el contador con el número total
+        BNE loop_array22                // Si no se ha terminado, repetir
+
+        // Imprimir nueva línea
+    print newline, lennewline
+
+    LDP x4, x5, [sp], #16          // Restaurar x4 y x5
+    LDP x2, x3, [sp], #16          // Restaurar x2 y x3
+    LDP x9, x10, [sp], #16         // Restaurar x9 y x10
+    LDP x0, x1, [sp], #16          // Restaurar x0 y x1
+    LDP x29, x30, [sp], #16        // Restaurar Frame Pointer y Link Register
+
+    ret                            // Retornar de la función
+
+
+
+
+
+
 
 
 copy_array:
