@@ -4,6 +4,7 @@
 .extern do_bubble
 .extern do_quick
 .extern do_InsertionSort
+.extern do_mergeSort
 
 .data
     clear:
@@ -172,7 +173,7 @@ _start:
         
         Merge_Sort:
             print operacionesText, lenOperacionesText
-            //bl do_memoria
+            bl do_mergeSort
             B cont
 
         cont:

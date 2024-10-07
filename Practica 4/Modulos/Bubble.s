@@ -4,7 +4,7 @@
 .extern count
 
 
-.global bubbleSort
+/*.global bubbleSort
 //.global itoa
 //.global no_visualizar
 
@@ -17,7 +17,7 @@
 .global bubbleSort_desendente
 .global no_visualizar1
 .global bubbleSort_desendenteConPasos
-.global print_array2
+.global print_array2*/
 
 .data
     clear:
@@ -210,7 +210,7 @@ do_bubble:
         ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
         ret                          // Regresar al punto donde se llamó
 
-
+//***************************************** Inicio del Buble Sort Acendete**************
 no_visualizar:
     bl bubbleSort
     //bl bubbleSort_desendente
@@ -372,6 +372,9 @@ print_array:
 
     ret                            // Retornar de la función
 
+//***************************************** Fin del Buble Sort Acendete**************
+
+//***************************************** Inicio del Buble Sort Decendente**************
 
 no_visualizar1:
     bl bubbleSort_desendente
@@ -537,7 +540,7 @@ print_array2:
     ret                            // Retornar de la función
 
 
-
+//***************************************** Inicio del Buble Sort Decendente**************
 
 
 
