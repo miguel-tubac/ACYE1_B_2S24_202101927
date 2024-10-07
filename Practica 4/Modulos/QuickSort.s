@@ -2,7 +2,7 @@
 
 .extern array
 .extern count
-.global qsort
+.global quicksort
 
 //.global copy_array
 //.global copy_array2
@@ -71,6 +71,14 @@
     conjInicial: 
         .asciz "\nConjunto inicial: "
         lenconjInicial = . - conjInicial
+
+    pivote: 
+        .asciz "\nDividiendo por pivote ("
+        lenpivote = . - pivote
+
+    finpivote:
+        .asciz "):"
+        lenfinpivote = . - finpivote
 
 
 .bss
@@ -162,8 +170,8 @@ do_quick:
             cmp w10,48
             beq no_visualizar
 
-            //cmp w10,49
-            //beq bubbleSort_ConPasos
+            cmp w10,49
+            beq quicksort_Pasos_inicio
 
             b invalido
 
@@ -203,19 +211,12 @@ do_quick:
 
 //***************************************** Inicio del quick**************
 no_visualizar:
-    ldr x0, =array
-    mov x1, 0
-    ldr x2, =count
-    ldr x2, [x2]
-    sub x2,x2,1
-    //add x2,x2,1
-    //ldr x4, =count
-    //ldr x4, [x4]
-    //add x4,x4,1
-    //ldr x6, =count
-    //ldr x6, [x6]
-    //add x6,x6,1
-    bl qsort
+    LDR x0, =array
+    MOV x1, 0
+    LDR x2, =count
+    LDR x2, [x2] // length => cantidad de numeros leidos del csv
+    SUB x2, x2, 1
+    bl quicksort
     
     // recorrer array y convertir a ascii
     LDR x9, =count
@@ -244,66 +245,363 @@ no_visualizar:
 
 
 // Función Quick Sort
-qsort:
+quicksort:
+    // x0 = array [direccion de memoria]
+    // x1 = inicio
+    // x2 = fin
+
+    // if (inicio >= fin)
+    CMP x1, x2
+    BGE quicksort_final
+    // endif
+    LDR w3, [x0, x1, LSL 2]  // pivote -> w3 | pivote = array[inicio]
+
+    // izq = x4, der = x5
+    ADD x4, x1, 1   // izq = inicio + 1
+    MOV x5, x2      // der = fin
+
+    // while(izq <= der)
+    quicksort_while_principal:
+
+        // while(izq <= fin && array[izq] < pivote)
+        quicksort_while_interno_1:
+
+            // primera condicion: izq <= fin
+            CMP x4, x2
+            BGT quicksort_while_interno_2
+            // segunda condicion: array[izq] < pivote
+            LDR w6, [x0, x4, LSL 2]    // array[izq]
+            CMP w6, w3
+            BGE quicksort_while_interno_2
+            ADD x4, x4, 1   // izq++
+            B quicksort_while_interno_1
+
+
+        // while(der > inicio && array[der] >= pivote)
+        quicksort_while_interno_2:
+            // primera condicion: der > inicio
+            CMP x5, x1
+            BLE quicksort_intercambio
+            // segunda condicion: array[der] >= pivote
+            LDR w6, [x0, x5, LSL 2]    // array[der]
+            CMP w6, w3
+            BLT quicksort_intercambio
+            SUB x5, x5, 1   // der--
+            B quicksort_while_interno_2
+
+
+        // if(izq < der)
+        quicksort_intercambio:
+
+            // condicion: izq < der
+            CMP x4, x5
+            BGE quicksort_while_continuacion
+            // hacer intercambio
+            LDR w6, [x0, x4, LSL 2]    // array[izq]
+            LDR w7, [x0, x5, LSL 2]    // array[der]
+            STR w7, [x0, x4, LSL 2]    // array[izq] = array[der]
+            STR w6, [x0, x5, LSL 2]    // array[der] = array[izq]
+
+        // condicion while principal: izq <= der
+        quicksort_while_continuacion:
+            CMP x4, x5
+            BLE quicksort_while_principal
+            
+    // bloque condicionante: if(der > inicio)
+    CMP x5, x1
+    BLE quicksort_recursividad
+
+    // hacer intercambio
+    LDR w6, [x0, x1, LSL 2]    // array[inicio]
+    LDR w7, [x0, x5, LSL 2]    // array[der]
+
+    STR w7, [x0, x1, LSL 2]    // array[inicio] = array[der]
+    STR w6, [x0, x5, LSL 2]    // array[der] = array[inicio]
+
+    quicksort_recursividad:
+        // PRIMERA RECURSIVIDAD
+        // STP x0, x1, [sp, #-16]! 
+        // almacenar en la pila los registros  x1 = inicio x5 = der  x2 = fin
+        STP x1, x2, [SP, #-16]!
+        STR x5, [SP, #-16]!
+
+        // actualizar parametro: fin = der - 1
+        SUB x2, x5, 1
+        
+        //STP x29, x30, [sp, #-16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
+        // almacenar puntero del progrma en la pila
+        STP x29, x30, [SP, #-16]!
+
+        // primera llamada recursiva: quicksort(array, inicio, der - 1)
+        BL quicksort
+
+        // recuperar puntero del programa de la pila
+        LDP x29, x30, [SP], #16
+
+        // recuperar registro  x1 = inicio x5 = der  x2 = fin
+        LDR x5, [SP], 16
+        LDP x1, x2, [SP], 16
+
+        // SEGUNDA RECURSIVIDAD
+        // almacenar en la pila los registros  x1 = inicio x5 = der  x2 = fin
+        STP x1, x2, [SP, -16]!
+        STR x5, [SP, -16]!
+
+        // actualizar parametro: inicio = der + 1
+        ADD x1, x5, 1
+        
+        // almacenar puntero del progrma en la pila
+        STP x29, x30, [SP, -16]!
+
+        // primera llamada recursiva: quicksort(array, inicio, der - 1)
+        BL quicksort
+
+        // recuperar puntero del programa de la pila
+        LDP x29, x30, [SP], 16
+
+        // recuperar registros x1 = inicio x5 = der  x2 = fin
+        LDR x5, [SP], 16
+        LDP x1, x2, [SP], 16
+
+    quicksort_final:
+        RET
+
+
+
+
+
+
+quicksort_Pasos_inicio:
+    MOV x11, 0                      // Inicializar contador
+    bl print_array           // Llamar a la rutina para imprimir el arreglo
+    //fin
+    //cargamos los valores iniciales
+    LDR x0, =array
+    MOV x1, 0
+    LDR x2, =count
+    LDR x2, [x2] // length => cantidad de numeros leidos del csv
+    SUB x2, x2, 1
+
+    // Función Quick Sort
+    quicksort_Pasos:
+        // x0 = array [direccion de memoria]
+        // x1 = inicio
+        // x2 = fin
+
+        // if (inicio >= fin)
+        CMP x1, x2
+        BGE quicksort_final1
+        // endif
+        LDR w3, [x0, x1, LSL 2]  // pivote -> w3 | pivote = array[inicio]
+
+        //Aca la imprecion del pivote
+        bl print_pivote
+
+        // izq = x4, der = x5
+        ADD x4, x1, 1   // izq = inicio + 1
+        MOV x5, x2      // der = fin
+
+        // while(izq <= der)
+        quicksort_while_principal1:
+
+            // while(izq <= fin && array[izq] < pivote)
+            quicksort_while_interno_11:
+
+                // primera condicion: izq <= fin
+                CMP x4, x2
+                BGT quicksort_while_interno_21
+                // segunda condicion: array[izq] < pivote
+                LDR w6, [x0, x4, LSL 2]    // array[izq]
+                CMP w6, w3
+                BGE quicksort_while_interno_21
+                ADD x4, x4, 1   // izq++
+                B quicksort_while_interno_11
+
+
+            // while(der > inicio && array[der] >= pivote)
+            quicksort_while_interno_21:
+                // primera condicion: der > inicio
+                CMP x5, x1
+                BLE quicksort_intercambio1
+                // segunda condicion: array[der] >= pivote
+                LDR w6, [x0, x5, LSL 2]    // array[der]
+                CMP w6, w3
+                BLT quicksort_intercambio1
+                SUB x5, x5, 1   // der--
+                B quicksort_while_interno_21
+
+
+            // if(izq < der)
+            quicksort_intercambio1:
+
+                // condicion: izq < der
+                CMP x4, x5
+                BGE quicksort_while_continuacion1
+                // hacer intercambio
+                LDR w6, [x0, x4, LSL 2]    // array[izq]
+                LDR w7, [x0, x5, LSL 2]    // array[der]
+                STR w7, [x0, x4, LSL 2]    // array[izq] = array[der]
+                STR w6, [x0, x5, LSL 2]    // array[der] = array[izq]
+
+                ADD x11, x11 , 1 //x11 ++
+                bl print_array           // Llamar a la rutina para imprimir el arreglo
+            // condicion while principal: izq <= der
+            quicksort_while_continuacion1:
+                CMP x4, x5
+                BLE quicksort_while_principal1
+                
+        // bloque condicionante: if(der > inicio)
+        CMP x5, x1
+        BLE quicksort_recursividad1
+
+        // hacer intercambio
+        LDR w6, [x0, x1, LSL 2]    // array[inicio]
+        LDR w7, [x0, x5, LSL 2]    // array[der]
+
+        STR w7, [x0, x1, LSL 2]    // array[inicio] = array[der]
+        STR w6, [x0, x5, LSL 2]    // array[der] = array[inicio]
+
+        ADD x11, x11 , 1 //x11 ++
+        bl print_array           // Llamar a la rutina para imprimir el arreglo
+
+        quicksort_recursividad1:
+            // PRIMERA RECURSIVIDAD
+            // STP x0, x1, [sp, #-16]! 
+            // almacenar en la pila los registros  x1 = inicio x5 = der  x2 = fin
+            STP x1, x2, [SP, #-16]!
+            STR x5, [SP, #-16]!
+
+            // actualizar parametro: fin = der - 1
+            SUB x2, x5, 1
+            
+            //STP x29, x30, [sp, #-16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
+            // almacenar puntero del progrma en la pila
+            STP x29, x30, [SP, #-16]!
+            
+            // primera llamada recursiva: quicksort(array, inicio, der - 1)
+            BL quicksort_Pasos
+
+            // recuperar puntero del programa de la pila
+            LDP x29, x30, [SP], #16
+
+            // recuperar registro  x1 = inicio x5 = der  x2 = fin
+            LDR x5, [SP], 16
+            LDP x1, x2, [SP], 16
+
+            // SEGUNDA RECURSIVIDAD
+            // almacenar en la pila los registros  x1 = inicio x5 = der  x2 = fin
+            STP x1, x2, [SP, -16]!
+            STR x5, [SP, -16]!
+
+            // actualizar parametro: inicio = der + 1
+            ADD x1, x5, 1
+            
+            // almacenar puntero del progrma en la pila
+            STP x29, x30, [SP, -16]!
+            
+            // primera llamada recursiva: quicksort(array, inicio, der - 1)
+            BL quicksort_Pasos
+
+            // recuperar puntero del programa de la pila
+            LDP x29, x30, [SP], 16
+
+            // recuperar registros x1 = inicio x5 = der  x2 = fin
+            LDR x5, [SP], 16
+            LDP x1, x2, [SP], 16
+
+        quicksort_final1:
+            
+            ret
+            /*// recuperar puntero del programa de la pila
+            //LDP x29, x30, [SP], 16
+            print newline, lennewline
+            print precionarEnter, lenPrecionarEnter
+            read 0, filename, 50
+            b menuS*/
+
+
+
+
+
+
+
+print_pivote:
     STP x29, x30, [sp, #-16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
     MOV x29, sp                    // Actualizar el Frame Pointer al valor de sp
-    cmp w1, w2                       // Comparar bajo (w1) con alto (w2)
-    bge end_qs                       // Si bajo >= alto, terminar
+    STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
+    STP x6, x7, [sp, #-16]!       // Guardar registros adicionales
+    STP x2, x3, [sp, #-16]!        // Guardar x2 y x3 (usados para itoa)
+    STP x4, x5, [sp, #-16]!        // Guardar x4 y x5 (si se usan en itoa o la rutina actual)
 
-    mov w6, w1                       // Pasar los parámetros
-    mov w3, w2
-    bl partition                     // Llamar a la función de partición
+    print pivote, lenpivote
+    MOV x0, x3
+    LDR x1, =num1
+    BL itoa                        // Llamada a itoa para convertir el número
+    print num1, x10
+    print finpivote, lenfinpivote
 
-    mov w4, w6                       // Obtener el índice del pivote
+    // Imprimir nueva línea
+    print newline, lennewline
 
-    // Ordenar la parte izquierda
-    mov w2, w4                       // w2 = pivote - 1
-    sub w2, w4, #1
-    bl qsort
-
-    // Ordenar la parte derecha
-    mov w1, w4                       // w1 = pivote + 1
-    add w1, w4, #1
-    bl qsort
-
-end_qs:
+    LDP x4, x5, [sp], #16          // Restaurar x4 y x5
+    LDP x2, x3, [sp], #16          // Restaurar x2 y x3
+    LDP x6, x7, [sp], #16         // Restaurar x9 y x10
+    LDP x0, x1, [sp], #16          // Restaurar x0 y x1
     LDP x29, x30, [sp], #16        // Restaurar Frame Pointer y Link Register
-    ret
 
-// Función Partition (Partición del array)
-partition:
-    //ldr     w3, [x0, x2, lsl #2]  // Hacer swap de a[l] y el pivote
-    ldr w3, [x0, x2, lsl #2]          // Cargar el pivote (array[alto])
-    sub w1, w1, #1                    // i = bajo - 1
-
-    loop:
-        add w6, w6, #1                    // Incrementar el índice j
-        cmp w6, w2                        // Comparar con el índice alto
-        bge end_partition
-
-        ldr w4, [x0, x6, lsl #2]          // Cargar el elemento en arr[j]
-        cmp w4, w3                        // Comparar arr[j] con el pivote
-        bgt loop                          // Si arr[j] > pivote, continuar
-
-        add w1, w1, #1                    // Incrementar el índice i
-        ldr w5, [x0, x1, lsl #2]          // Intercambiar arr[i] con arr[j]
-        str w4, [x0, x1, lsl #2]
-        str w5, [x0, x6, lsl #2]
-        b loop
-
-    end_partition:
-        add w1, w1, #1                    // Incrementar i
-        ldr w4, [x0, x1, lsl #2]          // Intercambiar arr[i+1] con arr[alto]
-        ldr w5, [x0, x2, lsl #2]
-        str w5, [x0, x1, lsl #2]
-        str w4, [x0, x2, lsl #2]
-
-        mov w6, w1                        // Retornar el índice del pivote
-        ret
+    ret                            // Retornar de la función
 
 
 
+print_array:
+    STP x29, x30, [sp, #-16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
+    MOV x29, sp                    // Actualizar el Frame Pointer al valor de sp
+    STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
+    STP x6, x7, [sp, #-16]!       // Guardar registros adicionales
+    STP x2, x3, [sp, #-16]!        // Guardar x2 y x3 (usados para itoa)
+    STP x4, x5, [sp, #-16]!        // Guardar x4 y x5 (si se usan en itoa o la rutina actual)
 
+    LDR x14, =count                // Cargar el valor de count (número de elementos)
+    LDR x14, [x14]                 // Leer cantidad de números leídos del CSV
+    MOV x7, 0                      // Inicializar contador
+    LDR x15, =array                // Cargar la dirección del array
+
+    CMP x11, 0
+    beq inciando
+
+    print pasosim, lenpasosim
+    MOV x0, x11
+    LDR x1, =num1
+    BL itoa                        // Llamada a itoa para convertir el número
+    print num1, x10
+    print dospuntos, lendospuntos
+    b loop_array2
+
+    inciando:
+        print conjInicial, lenconjInicial
+
+    loop_array2:
+        LDR w0, [x15], 4               // Cargar siguiente valor del array (elemento de 32 bits)
+        LDR x1, =num                   // Apuntar el buffer a la cadena "num"
+
+        BL itoa                        // Llamada a itoa para convertir el número
+        print num, x10
+        print espacio, lenEspacio      // Imprimir espacio entre los números
+
+        ADD x7, x7, 1                  // Incrementar el contador
+        CMP x14, x7                    // Comparar el contador con el número total
+        BNE loop_array2                // Si no se ha terminado, repetir
+
+        // Imprimir nueva línea
+    print newline, lennewline
+
+    LDP x4, x5, [sp], #16          // Restaurar x4 y x5
+    LDP x2, x3, [sp], #16          // Restaurar x2 y x3
+    LDP x6, x7, [sp], #16         // Restaurar x9 y x10
+    LDP x0, x1, [sp], #16          // Restaurar x0 y x1
+    LDP x29, x30, [sp], #16        // Restaurar Frame Pointer y Link Register
+
+    ret                            // Retornar de la función
 
 
 
