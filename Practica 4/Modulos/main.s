@@ -3,6 +3,7 @@
 // Declarar las variables como externas
 .extern do_bubble
 .extern do_quick
+.extern do_InsertionSort
 
 .data
     clear:
@@ -166,7 +167,7 @@ _start:
 
         Insertion_Sort:
             print divisionText, lenDivisionText
-            //bl do_div
+            bl do_InsertionSort
             B cont
         
         Merge_Sort:

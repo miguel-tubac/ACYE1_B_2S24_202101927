@@ -199,6 +199,7 @@ do_bubble:
             b menuS
 
     end:
+        bl copy_array2//esto es para que el array original mantenga el valor con que se inicio
         // Mostrar el precionar enter
         mov x0, 1              // Descriptor de archivo para stdout
         ldr x1, =regresandoInicio       // Dirección de nueva línea

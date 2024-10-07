@@ -188,6 +188,7 @@ do_quick:
             b menuS
 
     end:
+        bl copy_array2//esto es para que el array original mantenga el valor con que se inicio
         // Mostrar el precionar enter
         mov x0, 1              // Descriptor de archivo para stdout
         ldr x1, =regresandoInicio       // Dirección de nueva línea
@@ -202,11 +203,20 @@ do_quick:
 
 //***************************************** Inicio del quick**************
 no_visualizar:
-    /*LDR x0, =array
-    LDR x1, =count
-    LDR x1, [x1] // length => cantidad de numeros leidos del csv*/
+    ldr x0, =array
+    mov x1, 0
+    ldr x2, =count
+    ldr x2, [x2]
+    sub x2,x2,1
+    //add x2,x2,1
+    //ldr x4, =count
+    //ldr x4, [x4]
+    //add x4,x4,1
+    //ldr x6, =count
+    //ldr x6, [x6]
+    //add x6,x6,1
     bl qsort
-    //bl bubbleSort_desendente
+    
     // recorrer array y convertir a ascii
     LDR x9, =count
     LDR x9, [x9] // length => cantidad de numeros leidos del csv
@@ -233,99 +243,85 @@ no_visualizar:
 
 
 
-
-
-
-
+// Función Quick Sort
 qsort:
     STP x29, x30, [sp, #-16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
     MOV x29, sp                    // Actualizar el Frame Pointer al valor de sp
-    // Cargar la dirección de la variable 'count' (número de elementos)
-    LDR x0, =count          
-    LDR x0, [x0]            // Cargar el valor de count (cantidad de números)
-    MOV x1, 0               // Inicializar índice bajo (low = 0)
-    SUB x0, x0, 1           // Calcular el índice alto (high = count - 1)
-    
-    // Llamar a la función recursiva de QuickSort con los parámetros: (low, high)
-    BL quickSort_recursive
+    cmp w1, w2                       // Comparar bajo (w1) con alto (w2)
+    bge end_qs                       // Si bajo >= alto, terminar
+
+    mov w6, w1                       // Pasar los parámetros
+    mov w3, w2
+    bl partition                     // Llamar a la función de partición
+
+    mov w4, w6                       // Obtener el índice del pivote
+
+    // Ordenar la parte izquierda
+    mov w2, w4                       // w2 = pivote - 1
+    sub w2, w4, #1
+    bl qsort
+
+    // Ordenar la parte derecha
+    mov w1, w4                       // w1 = pivote + 1
+    add w1, w4, #1
+    bl qsort
+
+end_qs:
     LDP x29, x30, [sp], #16        // Restaurar Frame Pointer y Link Register
-    RET                     // Retornar cuando el arreglo esté completamente ordenado
+    ret
 
-
-// quickSort_recursive: Función recursiva QuickSort
-// Parámetros: x0 = índice bajo (low), x1 = índice alto (high)
-quickSort_recursive:
-    STP x29, x30, [sp, #-16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
-    MOV x29, sp                    // Actualizar el Frame Pointer al valor de sp
-    CMP x0, x1              // Si low >= high, retornar (base de la recursión)
-    BGE quickSort_return
-
-    // Llamar a la función partition con los parámetros: (low, high)
-    MOV x2, x0              // Pasar 'low' a x2
-    MOV x3, x1              // Pasar 'high' a x3
-    BL partition            // partition devuelve el pivote en x0
-
-    // Llamar recursivamente a quickSort_recursive en el lado izquierdo (low, pivot - 1)
-    SUB x1, x0, 1           // pivot - 1
-    BL quickSort_recursive   // Ordenar la parte izquierda
-
-    // Llamar recursivamente a quickSort_recursive en el lado derecho (pivot + 1, high)
-    ADD x0, x0, 1           // pivot + 1
-    MOV x1, x3              // Restaurar el valor original de high
-    BL quickSort_recursive   // Ordenar la parte derecha
-
-    quickSort_return:
-    LDP x29, x30, [sp], #16        // Restaurar Frame Pointer y Link Register
-        RET
-
-
-// partition: Función de partición
-// Parámetros: x0 = índice bajo (low), x1 = índice alto (high)
-// Retorno: x0 = índice del pivote después de la partición
+// Función Partition (Partición del array)
 partition:
-    STP x29, x30, [sp, #-16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
-    MOV x29, sp                    // Actualizar el Frame Pointer al valor de sp
-    LDR x2, =array          // Cargar la dirección base del arreglo
+    //ldr     w3, [x0, x2, lsl #2]  // Hacer swap de a[l] y el pivote
+    ldr w3, [x0, x2, lsl #2]          // Cargar el pivote (array[alto])
+    sub w1, w1, #1                    // i = bajo - 1
 
-    // Seleccionar el pivote como el último elemento
-    LDR w3, [x2, x1, LSL #2]    // pivote = array[high]
+    loop:
+        add w6, w6, #1                    // Incrementar el índice j
+        cmp w6, w2                        // Comparar con el índice alto
+        bge end_partition
 
-    // Inicializar i a low - 1
-    SUB x4, x0, 1           // i = low - 1
+        ldr w4, [x0, x6, lsl #2]          // Cargar el elemento en arr[j]
+        cmp w4, w3                        // Comparar arr[j] con el pivote
+        bgt loop                          // Si arr[j] > pivote, continuar
 
-    partition_loop:
-        ADD x5, x0, x4          // j = low
-        CMP x5, x1              // Comparar j con high
-        BGE partition_end       // Si j >= high, salir del bucle
+        add w1, w1, #1                    // Incrementar el índice i
+        ldr w5, [x0, x1, lsl #2]          // Intercambiar arr[i] con arr[j]
+        str w4, [x0, x1, lsl #2]
+        str w5, [x0, x6, lsl #2]
+        b loop
 
-        // Cargar array[j]
-        LDR w6, [x2, x0, LSL #2]    // array[j]
+    end_partition:
+        add w1, w1, #1                    // Incrementar i
+        ldr w4, [x0, x1, lsl #2]          // Intercambiar arr[i+1] con arr[alto]
+        ldr w5, [x0, x2, lsl #2]
+        str w5, [x0, x1, lsl #2]
+        str w4, [x0, x2, lsl #2]
 
-        // Comparar array[j] con el pivote
-        CMP w6, w3
-        BGT partition_skip       // Si array[j] > pivote, saltar
+        mov w6, w1                        // Retornar el índice del pivote
+        ret
 
-        // Incrementar i y hacer intercambio
-        ADD x4, x4, 1           // i++
-        LDR w7, [x2, x4, LSL #2]    // Cargar array[i]
-        STR w6, [x2, x4, LSL #2]    // array[i] = array[j]
-        STR w7, [x2, x0, LSL #2]    // array[j] = array[i]
 
-    partition_skip:
-        ADD x0, x0, 1           // j++
-        B partition_loop        // Repetir el bucle
 
-    partition_end:
-        // Intercambiar array[i + 1] con array[high] (pivote)
-        ADD x4, x4, 1           // i++
-        LDR w7, [x2, x1, LSL #2]    // Cargar array[high]
-        STR w3, [x2, x4, LSL #2]    // array[i + 1] = pivote
-        STR w7, [x2, x1, LSL #2]    // array[high] = array[i + 1]
 
-        // Retornar el índice del pivote
-        MOV x0, x4              // Retornar i + 1
-        LDP x29, x30, [sp], #16        // Restaurar Frame Pointer y Link Register
-        RET
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
