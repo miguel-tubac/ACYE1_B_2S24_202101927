@@ -184,11 +184,11 @@ do_quick:
             LDR x10, =opcion
             LDRB w10, [x10]
 
-            //cmp w10,48
-            //beq no_visualizar1
+            cmp w10,48
+            beq no_visualizar2
 
-            //cmp w10,49
-            //beq bubbleSort_desendenteConPasos
+            cmp w10,49
+            beq quicksort_Pasos_inicio2_Desendente
             
             b invalido
         cont:
@@ -209,7 +209,7 @@ do_quick:
 
 
 
-//***************************************** Inicio del quick**************
+//***************************************** Inicio del Quick Sort Acendente**************
 no_visualizar:
     LDR x0, =array
     MOV x1, 0
@@ -320,7 +320,6 @@ quicksort:
 
     quicksort_recursividad:
         // PRIMERA RECURSIVIDAD
-        // STP x0, x1, [sp, #-16]! 
         // almacenar en la pila los registros  x1 = inicio x5 = der  x2 = fin
         STP x1, x2, [SP, #-16]!
         STR x5, [SP, #-16]!
@@ -328,7 +327,6 @@ quicksort:
         // actualizar parametro: fin = der - 1
         SUB x2, x5, 1
         
-        //STP x29, x30, [sp, #-16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
         // almacenar puntero del progrma en la pila
         STP x29, x30, [SP, #-16]!
 
@@ -366,11 +364,6 @@ quicksort:
     quicksort_final:
         RET
 
-
-
-
-
-
 quicksort_Pasos_inicio:
     MOV x11, 0                      // Inicializar contador
     bl print_array           // Llamar a la rutina para imprimir el arreglo
@@ -381,6 +374,17 @@ quicksort_Pasos_inicio:
     LDR x2, =count
     LDR x2, [x2] // length => cantidad de numeros leidos del csv
     SUB x2, x2, 1
+    // almacenar puntero del progrma en la pila
+    STP x29, x30, [SP, #-16]!
+
+    bl quicksort_Pasos
+    // recuperar puntero del programa de la pila
+    LDP x29, x30, [SP], #16
+
+    print newline, lennewline
+    print precionarEnter, lenPrecionarEnter
+    read 0, filename, 50
+    b menuS
 
     // Función Quick Sort
     quicksort_Pasos:
@@ -393,9 +397,6 @@ quicksort_Pasos_inicio:
         BGE quicksort_final1
         // endif
         LDR w3, [x0, x1, LSL 2]  // pivote -> w3 | pivote = array[inicio]
-
-        //Aca la imprecion del pivote
-        bl print_pivote
 
         // izq = x4, der = x5
         ADD x4, x1, 1   // izq = inicio + 1
@@ -443,8 +444,15 @@ quicksort_Pasos_inicio:
                 STR w7, [x0, x4, LSL 2]    // array[izq] = array[der]
                 STR w6, [x0, x5, LSL 2]    // array[der] = array[izq]
 
+                STP x29, x30, [SP, #-16]!
+                //Aca la imprecion del pivote
+                bl print_pivote
+                LDP x29, x30, [SP], #16
+
+                STP x29, x30, [SP, #-16]!
                 ADD x11, x11 , 1 //x11 ++
                 bl print_array           // Llamar a la rutina para imprimir el arreglo
+                LDP x29, x30, [SP], #16
             // condicion while principal: izq <= der
             quicksort_while_continuacion1:
                 CMP x4, x5
@@ -461,8 +469,15 @@ quicksort_Pasos_inicio:
         STR w7, [x0, x1, LSL 2]    // array[inicio] = array[der]
         STR w6, [x0, x5, LSL 2]    // array[der] = array[inicio]
 
+        STP x29, x30, [SP, #-16]!
+        //Aca la imprecion del pivote
+        bl print_pivote
+        LDP x29, x30, [SP], #16
+
+        STP x29, x30, [SP, #-16]!
         ADD x11, x11 , 1 //x11 ++
         bl print_array           // Llamar a la rutina para imprimir el arreglo
+        LDP x29, x30, [SP], #16
 
         quicksort_recursividad1:
             // PRIMERA RECURSIVIDAD
@@ -474,7 +489,6 @@ quicksort_Pasos_inicio:
             // actualizar parametro: fin = der - 1
             SUB x2, x5, 1
             
-            //STP x29, x30, [sp, #-16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
             // almacenar puntero del progrma en la pila
             STP x29, x30, [SP, #-16]!
             
@@ -485,43 +499,32 @@ quicksort_Pasos_inicio:
             LDP x29, x30, [SP], #16
 
             // recuperar registro  x1 = inicio x5 = der  x2 = fin
-            LDR x5, [SP], 16
-            LDP x1, x2, [SP], 16
+            LDR x5, [SP], #16
+            LDP x1, x2, [SP], #16
 
             // SEGUNDA RECURSIVIDAD
             // almacenar en la pila los registros  x1 = inicio x5 = der  x2 = fin
-            STP x1, x2, [SP, -16]!
-            STR x5, [SP, -16]!
+            STP x1, x2, [SP, #-16]!
+            STR x5, [SP, #-16]!
 
             // actualizar parametro: inicio = der + 1
             ADD x1, x5, 1
             
             // almacenar puntero del progrma en la pila
-            STP x29, x30, [SP, -16]!
+            STP x29, x30, [SP, #-16]!
             
             // primera llamada recursiva: quicksort(array, inicio, der - 1)
             BL quicksort_Pasos
 
             // recuperar puntero del programa de la pila
-            LDP x29, x30, [SP], 16
-
+            LDP x29, x30, [SP], #16
+            
             // recuperar registros x1 = inicio x5 = der  x2 = fin
-            LDR x5, [SP], 16
-            LDP x1, x2, [SP], 16
+            LDR x5, [SP], #16
+            LDP x1, x2, [SP], #16
 
         quicksort_final1:
-            
             ret
-            /*// recuperar puntero del programa de la pila
-            //LDP x29, x30, [SP], 16
-            print newline, lennewline
-            print precionarEnter, lenPrecionarEnter
-            read 0, filename, 50
-            b menuS*/
-
-
-
-
 
 
 
@@ -603,30 +606,336 @@ print_array:
 
     ret                            // Retornar de la función
 
+//***************************************** Fin del Quick Sort Acendente**************
+
+
+
+//***************************************** Inicio del Quick Sort Decendete**************
+
+
+no_visualizar2:
+    LDR x0, =array
+    MOV x1, 0
+    LDR x2, =count
+    LDR x2, [x2] // length => cantidad de numeros leidos del csv
+    SUB x2, x2, 1
+    bl quicksort2
+    
+    // recorrer array y convertir a ascii
+    LDR x9, =count
+    LDR x9, [x9] // length => cantidad de numeros leidos del csv
+    MOV x7, 0
+    LDR x15, =array
+
+    print resulta, lenResultado
+    loop_array3:
+        LDR w0, [x15], 4
+        LDR x1, =num
+        BL itoa
+
+        print num, x10
+        print espacio, lenEspacio
+
+        ADD x7, x7, 1
+        CMP x9, x7
+        BNE loop_array3
+
+    print newline, lennewline
+    print precionarEnter, lenPrecionarEnter
+    read 0, filename, 50
+    b menuS
+
+
+
+// Función Quick Sort
+quicksort2:
+    // x0 = array [direccion de memoria]
+    // x1 = inicio
+    // x2 = fin
+
+    // if (inicio >= fin)
+    CMP x1, x2
+    BGE quicksort_final3
+    // endif
+    LDR w3, [x0, x1, LSL 2]  // pivote -> w3 | pivote = array[inicio]
+
+    // izq = x4, der = x5
+    ADD x4, x1, 1   // izq = inicio + 1
+    MOV x5, x2      // der = fin
+
+    // while(izq <= der)
+    quicksort_while_principal2:
+
+        // while(izq <= fin && array[izq] < pivote)
+        quicksort_while_interno_12:
+
+            // primera condicion: izq <= fin
+            CMP x4, x2
+            BGT quicksort_while_interno_22
+            // segunda condicion: array[izq] < pivote
+            LDR w6, [x0, x4, LSL 2]    // array[izq]
+            CMP w6, w3
+            BLE quicksort_while_interno_22
+            ADD x4, x4, 1   // izq++
+            B quicksort_while_interno_12
+
+
+        // while(der > inicio && array[der] >= pivote)
+        quicksort_while_interno_22:
+            // primera condicion: der > inicio
+            CMP x5, x1
+            BLE quicksort_intercambio2
+            // segunda condicion: array[der] >= pivote
+            LDR w6, [x0, x5, LSL 2]    // array[der]
+            CMP w6, w3
+            BGT quicksort_intercambio2
+            SUB x5, x5, 1   // der--
+            B quicksort_while_interno_22
+
+
+        // if(izq < der)
+        quicksort_intercambio2:
+
+            // condicion: izq < der
+            CMP x4, x5
+            BGE quicksort_while_continuacion2
+            // hacer intercambio
+            LDR w6, [x0, x4, LSL 2]    // array[izq]
+            LDR w7, [x0, x5, LSL 2]    // array[der]
+            STR w7, [x0, x4, LSL 2]    // array[izq] = array[der]
+            STR w6, [x0, x5, LSL 2]    // array[der] = array[izq]
+
+        // condicion while principal: izq <= der
+        quicksort_while_continuacion2:
+            CMP x4, x5
+            BLE quicksort_while_principal2
+            
+    // bloque condicionante: if(der > inicio)
+    CMP x5, x1
+    BLE quicksort_recursividad2
+
+    // hacer intercambio
+    LDR w6, [x0, x1, LSL 2]    // array[inicio]
+    LDR w7, [x0, x5, LSL 2]    // array[der]
+
+    STR w7, [x0, x1, LSL 2]    // array[inicio] = array[der]
+    STR w6, [x0, x5, LSL 2]    // array[der] = array[inicio]
+
+    quicksort_recursividad2:
+        // PRIMERA RECURSIVIDAD
+        // almacenar en la pila los registros  x1 = inicio x5 = der  x2 = fin
+        STP x1, x2, [SP, #-16]!
+        STR x5, [SP, #-16]!
+
+        // actualizar parametro: fin = der - 1
+        SUB x2, x5, 1
+        
+        // almacenar puntero del progrma en la pila
+        STP x29, x30, [SP, #-16]!
+
+        // primera llamada recursiva: quicksort(array, inicio, der - 1)
+        BL quicksort2
+
+        // recuperar puntero del programa de la pila
+        LDP x29, x30, [SP], #16
+
+        // recuperar registro  x1 = inicio x5 = der  x2 = fin
+        LDR x5, [SP], 16
+        LDP x1, x2, [SP], 16
+
+        // SEGUNDA RECURSIVIDAD
+        // almacenar en la pila los registros  x1 = inicio x5 = der  x2 = fin
+        STP x1, x2, [SP, -16]!
+        STR x5, [SP, -16]!
+
+        // actualizar parametro: inicio = der + 1
+        ADD x1, x5, 1
+        
+        // almacenar puntero del progrma en la pila
+        STP x29, x30, [SP, -16]!
+
+        // primera llamada recursiva: quicksort(array, inicio, der - 1)
+        BL quicksort2
+
+        // recuperar puntero del programa de la pila
+        LDP x29, x30, [SP], 16
+
+        // recuperar registros x1 = inicio x5 = der  x2 = fin
+        LDR x5, [SP], 16
+        LDP x1, x2, [SP], 16
+
+    quicksort_final3:
+        RET
 
 
 
 
 
+quicksort_Pasos_inicio2_Desendente:
+    MOV x11, 0                      // Inicializar contador
+    bl print_array           // Llamar a la rutina para imprimir el arreglo
+    //fin
+    //cargamos los valores iniciales
+    LDR x0, =array
+    MOV x1, 0
+    LDR x2, =count
+    LDR x2, [x2] // length => cantidad de numeros leidos del csv
+    SUB x2, x2, 1
+    // almacenar puntero del progrma en la pila
+    STP x29, x30, [SP, #-16]!
+
+    bl quicksort_Pasos4
+    // recuperar puntero del programa de la pila
+    LDP x29, x30, [SP], #16
+
+    print newline, lennewline
+    print precionarEnter, lenPrecionarEnter
+    read 0, filename, 50
+    b menuS
+
+    // Función Quick Sort
+    quicksort_Pasos4:
+        // x0 = array [direccion de memoria]
+        // x1 = inicio
+        // x2 = fin
+
+        // if (inicio >= fin)
+        CMP x1, x2
+        BGE quicksort_final4
+        // endif
+        LDR w3, [x0, x1, LSL 2]  // pivote -> w3 | pivote = array[inicio]
+
+        // izq = x4, der = x5
+        ADD x4, x1, 1   // izq = inicio + 1
+        MOV x5, x2      // der = fin
+
+        // while(izq <= der)
+        quicksort_while_principal14:
+
+            // while(izq <= fin && array[izq] < pivote)
+            quicksort_while_interno_14:
+
+                // primera condicion: izq <= fin
+                CMP x4, x2
+                BGT quicksort_while_interno_24
+                // segunda condicion: array[izq] < pivote
+                LDR w6, [x0, x4, LSL 2]    // array[izq]
+                CMP w6, w3
+                BLE quicksort_while_interno_24
+                ADD x4, x4, 1   // izq++
+                B quicksort_while_interno_14
+
+
+            // while(der > inicio && array[der] >= pivote)
+            quicksort_while_interno_24:
+                // primera condicion: der > inicio
+                CMP x5, x1
+                BLE quicksort_intercambio4
+                // segunda condicion: array[der] >= pivote
+                LDR w6, [x0, x5, LSL 2]    // array[der]
+                CMP w6, w3
+                BGT quicksort_intercambio4
+                SUB x5, x5, 1   // der--
+                B quicksort_while_interno_24
+
+
+            // if(izq < der)
+            quicksort_intercambio4:
+
+                // condicion: izq < der
+                CMP x4, x5
+                BGE quicksort_while_continuacion4
+                // hacer intercambio
+                LDR w6, [x0, x4, LSL 2]    // array[izq]
+                LDR w7, [x0, x5, LSL 2]    // array[der]
+                STR w7, [x0, x4, LSL 2]    // array[izq] = array[der]
+                STR w6, [x0, x5, LSL 2]    // array[der] = array[izq]
+
+                STP x29, x30, [SP, #-16]!
+                //Aca la imprecion del pivote
+                bl print_pivote
+                LDP x29, x30, [SP], #16
+
+                STP x29, x30, [SP, #-16]!
+                ADD x11, x11 , 1 //x11 ++
+                bl print_array           // Llamar a la rutina para imprimir el arreglo
+                LDP x29, x30, [SP], #16
+            // condicion while principal: izq <= der
+            quicksort_while_continuacion4:
+                CMP x4, x5
+                BLE quicksort_while_principal14
+                
+        // bloque condicionante: if(der > inicio)
+        CMP x5, x1
+        BLE quicksort_recursividad4
+
+        // hacer intercambio
+        LDR w6, [x0, x1, LSL 2]    // array[inicio]
+        LDR w7, [x0, x5, LSL 2]    // array[der]
+
+        STR w7, [x0, x1, LSL 2]    // array[inicio] = array[der]
+        STR w6, [x0, x5, LSL 2]    // array[der] = array[inicio]
+
+        STP x29, x30, [SP, #-16]!
+        //Aca la imprecion del pivote
+        bl print_pivote
+        LDP x29, x30, [SP], #16
+
+        STP x29, x30, [SP, #-16]!
+        ADD x11, x11 , 1 //x11 ++
+        bl print_array           // Llamar a la rutina para imprimir el arreglo
+        LDP x29, x30, [SP], #16
+
+        quicksort_recursividad4:
+            // PRIMERA RECURSIVIDAD
+            // STP x0, x1, [sp, #-16]! 
+            // almacenar en la pila los registros  x1 = inicio x5 = der  x2 = fin
+            STP x1, x2, [SP, #-16]!
+            STR x5, [SP, #-16]!
+
+            // actualizar parametro: fin = der - 1
+            SUB x2, x5, 1
+            
+            // almacenar puntero del progrma en la pila
+            STP x29, x30, [SP, #-16]!
+            
+            // primera llamada recursiva: quicksort(array, inicio, der - 1)
+            BL quicksort_Pasos4
+
+            // recuperar puntero del programa de la pila
+            LDP x29, x30, [SP], #16
+
+            // recuperar registro  x1 = inicio x5 = der  x2 = fin
+            LDR x5, [SP], #16
+            LDP x1, x2, [SP], #16
+
+            // SEGUNDA RECURSIVIDAD
+            // almacenar en la pila los registros  x1 = inicio x5 = der  x2 = fin
+            STP x1, x2, [SP, #-16]!
+            STR x5, [SP, #-16]!
+
+            // actualizar parametro: inicio = der + 1
+            ADD x1, x5, 1
+            
+            // almacenar puntero del progrma en la pila
+            STP x29, x30, [SP, #-16]!
+            
+            // primera llamada recursiva: quicksort(array, inicio, der - 1)
+            BL quicksort_Pasos4
+
+            // recuperar puntero del programa de la pila
+            LDP x29, x30, [SP], #16
+            
+            // recuperar registros x1 = inicio x5 = der  x2 = fin
+            LDR x5, [SP], #16
+            LDP x1, x2, [SP], #16
+
+        quicksort_final4:
+            ret
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-//******************************************* Fin del quick ********************
-
-
+//***************************************** Fin del Quick Sort Decendete**************
 
 copy_array:
     // Asumimos que array y array2 tienen el mismo tamaño (1024 bytes)
