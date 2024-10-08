@@ -57,7 +57,7 @@
         lennewline = . - newline
 
     resulta:
-        .asciz "\nResultado: "
+        .asciz "\nResultado: [ "
         lenResultado = . - resulta
 
     pasosim:
@@ -65,11 +65,11 @@
         lenpasosim = . -pasosim
 
     dospuntos:
-        .asciz " : "
+        .asciz " : [ "
         lendospuntos = . - dospuntos
     
     conjInicial: 
-        .asciz "\nConjunto inicial: "
+        .asciz "\nConjunto inicial: [ "
         lenconjInicial = . - conjInicial
 
     pivote: 
@@ -79,6 +79,10 @@
     finpivote:
         .asciz "):"
         lenfinpivote = . - finpivote
+
+    corchetFin:
+        .asciz " ]"
+        lencorchetFin = . - corchetFin
 
 
 .bss
@@ -236,7 +240,7 @@ no_visualizar:
         ADD x7, x7, 1
         CMP x9, x7
         BNE loop_array
-
+    print corchetFin, lencorchetFin
     print newline, lennewline
     print precionarEnter, lenPrecionarEnter
     read 0, filename, 50
@@ -594,7 +598,7 @@ print_array:
         ADD x7, x7, 1                  // Incrementar el contador
         CMP x14, x7                    // Comparar el contador con el número total
         BNE loop_array2                // Si no se ha terminado, repetir
-
+    print corchetFin, lencorchetFin
         // Imprimir nueva línea
     print newline, lennewline
 
@@ -639,7 +643,7 @@ no_visualizar2:
         ADD x7, x7, 1
         CMP x9, x7
         BNE loop_array3
-
+    print corchetFin, lencorchetFin
     print newline, lennewline
     print precionarEnter, lenPrecionarEnter
     read 0, filename, 50
