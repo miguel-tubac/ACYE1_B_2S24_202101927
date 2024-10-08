@@ -206,12 +206,18 @@ do_mergeSort:
 //***************************************** Inicio del Merge Sort Acendete**************
 
 no_visualizar:
-    LDR x0, =array
-    mov w1, 0
+    ldr x0, =array                        // address number table
+    mov x1,0                                       // first element
     LDR x2, =count
     LDR x2, [x2] // length => cantidad de numeros leidos del csv
-    SUB x2,x2,1
+    //SUB x2,x2,1                              // number of élements 
     bl mergeSort
+
+    // recorrer array y convertir a ascii
+    LDR x9, =count
+    LDR x9, [x9] // length => cantidad de numeros leidos del csv
+    MOV x7, 0
+    LDR x15, =array
 
     print resulta, lenResultado
     loop_array:
@@ -232,106 +238,98 @@ no_visualizar:
     b menuS
 
 
-// Función Principal Merge Sort
-mergeSort:
-    STP x29, x30, [SP, -16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
-    MOV x29, SP                   // Actualizar Frame Pointer
-    
-    CMP w1, w2                    // Comparar low (w1) con high (w2)
-    BGE mergeSortEnd              // Si low >= high, retornar
-    
-    // Dividir el arreglo en dos mitades
-    ADD w3, w1, w2                // W3 = low + high
-    ASR w3, w3, #1                // W3 = (low + high) / 2 (mitad)
-    
-    // Ordenar la primera mitad
-    MOV w4, w1                    // Pasar el valor de low a w4
-    MOV w5, w3                    // Pasar el valor de mid a w5
-    BL mergeSort                  // Llamar recursivamente a mergeSort para [low, mid]
 
-    // Ordenar la segunda mitad
-    ADD w4, w3, #1                // W4 = mid + 1
-    MOV w5, w2                    // Pasar el valor de high a w5
-    BL mergeSort                  // Llamar recursivamente a mergeSort para [mid+1, high]
-    
-    // Mezclar las dos mitades ordenadas
-    MOV w4, w1                    // Pasar el valor de low a w4
-    MOV w5, w3                    // Pasar el valor de mid a w5
-    MOV w6, w2                    // Pasar el valor de high a w6
-    BL merge                      // Llamar a merge para combinar las dos mitades ordenadas
-    
-mergeSortEnd:
-    LDP x29, x30, [SP], #16       // Restaurar Frame Pointer y Link Register
-    RET                           // Retornar
 
-// Función para combinar (merge) dos mitades ordenadas
+/******************************************************************/
+/*         merge                                              */ 
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains first start index
+/* r2 contains second start index */
+/* r3 contains the last index   */ 
 merge:
-    STP x29, x30, [SP, -16]!      // Guardar Frame Pointer (x29) y Link Register (x30)
-    MOV x29, SP                   // Actualizar Frame Pointer
-    
-    // Parámetros:
-    // x0 -> &arreglo (array)
-    // W1 -> low
-    // W2 -> mid
-    // W3 -> high
+    stp x1,lr,[sp,-16]!        // save  registers
+    stp x2,x3,[sp,-16]!        // save  registers
+    stp x4,x5,[sp,-16]!        // save  registers
+    stp x6,x7,[sp,-16]!        // save  registers
+    str x8,[sp,-16]!
+    mov x5,x2                  // init index x2->x5 
+first_section_loop:            // begin loop first section
+    ldr w6,[x0,x1,lsl 2]       // load value first section index r1
+    ldr w7,[x0,x5,lsl 2]       // load value second section index r5
+    cmp w6,w7
+    ble second_section_advance // <=  -> location first section OK
+    str w7,[x0,x1,lsl 2]       // store value second section in first section
+    add x8,x5,1
+    cmp w8,w3                  // end second section ?
+    ble insert_element
+    str w6,[x0,x5,lsl 2]
+    b second_section_advance   // loop
+insert_element:                // loop insert element part 1 into part 2
+    sub x4,x8,1
+    ldr w7,[x0,x8,lsl 2]       // load value 2
+    cmp w6,w7                  // value < 
+    bge store_value
+    str w6,[x0,x4,lsl 2]       // store value 
+    b second_section_advance   // loop
+store_value:
+    str w7,[x0,x4,lsl 2]       // store value 2
+    add x8,x8,1
+    cmp w8,w3                  // end second section ?
+    ble insert_element         // no loop 
+    sub x8,x8,1
+    str w6,[x0,x8,lsl 2]       // store value 1
+second_section_advance:
+    add x1,x1,1
+    cmp w1,w2                  // end first section ?
+    blt first_section_loop
 
-    // Tamaños de las mitades
-    ADD w4, w2, #1                // Tamaño izquierda: mid - low + 1
-    SUB w5, w3, w2                // Tamaño derecha: high - mid
-    
-    // Reservar espacio para los subarreglos izquierdo y derecho
-    // Usaremos dos punteros temporales x7 y x8 para acceder a cada mitad
-    // Creamos un buffer temporal para guardar los valores
-
-    MOV w6, w1                    // Índice inicial para la primera mitad
-    MOV w7, w4                    // Índice inicial para la segunda mitad
-    MOV w8, w1                    // Índice de mezcla del arreglo final
-    
-mergeLoop:
-    CMP w6, w2                    // Comparar índice izquierdo con mid
-    BGT mergeRight                // Si índice izquierdo > mid, ir a mergeRight
-    
-    CMP w7, w3                    // Comparar índice derecho con high
-    BGT mergeLeft                 // Si índice derecho > high, ir a mergeLeft
-    
-    // Comparar los elementos en cada subarreglo
-    ADD x9, x0, x6, LSL #2        // Cargar valor de la primera mitad en w9
-    LDR w9, [x9]
-    ADD x10, x0, x7, LSL #2       // Cargar valor de la segunda mitad en w10
-    LDR w10, [x10]
-    
-    CMP w9, w10                   // Comparar los valores
-    BLE mergeLeft                 // Si el valor de la izquierda es menor o igual, ir a mergeLeft
-    
-    // Mezcla desde la derecha (valor más grande)
-    ADD x11, x0, x8, LSL #2       // Posición de almacenamiento
-    STR w10, [x11]                // Guardar valor de la derecha en el arreglo final
-    ADD w7, w7, #1                // Incrementar índice derecho
-    ADD w8, w8, #1                // Incrementar índice final
-    B mergeLoop                   // Repetir el bucle
-    
-mergeLeft:
-    ADD x11, x0, x8, LSL #2       // Posición de almacenamiento
-    STR w9, [x11]                 // Guardar valor de la izquierda en el arreglo final
-    ADD w6, w6, #1                // Incrementar índice izquierdo
-    ADD w8, w8, #1                // Incrementar índice final
-    B mergeLoop                   // Repetir el bucle
-
-mergeRight:
-    // Si solo quedan valores en el lado derecho
-    CMP w7, w3                    // Comparar índice derecho con high
-    BGT mergeEnd                  // Si hemos procesado todo, finalizar
-
-    ADD x11, x0, x8, LSL #2       // Posición de almacenamiento
-    LDR w10, [x10]                // Guardar valor de la derecha en el arreglo final
-    STR w10, [x11]
-    ADD w7, w7, #1                // Incrementar índice derecho
-    ADD w8, w8, #1                // Incrementar índice final
-    B mergeRight                  // Continuar con el lado derecho
-
-mergeEnd:
-    LDP x29, x30, [SP], #16       // Restaurar Frame Pointer y Link Register
-    RET                           // Retornar
+merge_return:
+    ldr x8,[sp],16             // restaur 1 register
+    ldp x6,x7,[sp],16          // restaur  2 registers
+    ldp x4,x5,[sp],16          // restaur  2 registers
+    ldp x2,x3,[sp],16          // restaur  2 registers
+    ldp x1,lr,[sp],16          // restaur  2 registers
+    ret                        // return to address lr x30
+/******************************************************************/
+/*      merge sort                                                */ 
+/******************************************************************/
+/* x0 contains the address of table */
+/* x1 contains the index of first element */
+/* x2 contains the number of element */
+mergeSort:
+    stp x3,lr,[sp,-16]!    // save  registers
+    stp x4,x5,[sp,-16]!    // save  registers
+    stp x6,x7,[sp,-16]!    // save  registers
+    cmp w2,2               // end ?
+    blt merge_sort_end
+    lsr x4,x2,1            // number of element of each subset
+    add x5,x4,1
+    tst x2,#1              // odd ?
+    csel x4,x5,x4,ne
+    mov x5,x1              // save first element
+    mov x6,x2              // save number of element
+    mov x7,x4              // save number of element of each subset
+    mov x2,x4
+    bl mergeSort
+    mov x1,x7              // restaur number of element of each subset
+    mov x2,x6              // restaur  number of element
+    sub x2,x2,x1
+    mov x3,x5              // restaur first element
+    add x1,x1,x3           // + 1
+    bl mergeSort           // sort first subset
+    mov x1,x5              // restaur first element
+    mov x2,x7              // restaur number of element of each subset
+    add x2,x2,x1
+    mov x3,x6              // restaur  number of element
+    add x3,x3,x1 
+    sub x3,x3,1            // last index
+    bl merge
+merge_sort_end:
+    ldp x6,x7,[sp],16          // restaur  2 registers
+    ldp x4,x5,[sp],16          // restaur  2 registers
+    ldp x3,lr,[sp],16          // restaur  2 registers
+    ret                        // return to address lr x30
 
 
 
@@ -434,6 +432,23 @@ itoa:
         //print num, x10
 
     RET  //
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
