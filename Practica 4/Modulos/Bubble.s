@@ -45,11 +45,11 @@
         lenvisualizar = . - visualizar
     
     espacio:
-        .asciz " "
+        .ascii " "
         lenEspacio = .- espacio
     
     newline:
-        .asciz "\n"
+        .ascii "\n"
         lennewline = . - newline
 
     resulta:
@@ -69,8 +69,12 @@
         lenconjInicial = . - conjInicial
 
     corchetFin:
-        .asciz " ]"
+        .ascii " ]"
         lencorchetFin = . - corchetFin
+
+    corchetInicio:
+        .ascii "[ "
+        lencorchetInicio = . - corchetInicio
 
     msgExecuteTime:
         .ascii "El tiempo de ejecución fue de: "
@@ -81,7 +85,7 @@
         lenPrefixSec = .- prefixSec
 
     prefixMicro:
-        .ascii " microsegundos\n"
+        .ascii " microsegundos\n\n"
         lenPrefixMicro = .- prefixMicro
 
     msgFilename:
@@ -102,6 +106,18 @@
     visualizar2:
         .asciz "\nIngrese 1 si deceas agregar este ordenamiento y 0 si no: "
         lenvisualizar2 = . - visualizar2
+
+    incialConj:
+        .ascii "Conjunto inicial: "
+        lenincialConj = .- incialConj
+    
+    tipoOdeanmiento:
+        .ascii "Ordenando con Buble Sort...\n"
+        lentipoOdeanmiento = . - tipoOdeanmiento
+
+    finalConj:
+        .ascii "Conjunto ordenado: "
+        lenfinalConj = . -finalConj
 
 
 .bss
@@ -262,7 +278,6 @@ do_bubble:
 
 
 seleccion:
-    //stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
     print visualizar2, lenvisualizar2
     read 0, opcion, 2
 
@@ -272,17 +287,25 @@ seleccion:
     cmp w10,49
     beq escritura_archivo_texto
 
-    //ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
     ret
 
 
 escritura_archivo_texto:
     stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
     BL openReport                // Llama a la función para abrir el archivo de reporte
-    
 
     LDR x20, =fileDescriptor     // Cargar la dirección de fileDescriptor
     LDR x20, [x20]               // Cargar el descriptor del archivo en x20
+
+    agregarTexto x20, incialConj, lenincialConj //mensaje del conjunto inicial
+
+    bl agregar_conjuntoIncial //Agrega el conjunto incial
+
+    agregarTexto x20, tipoOdeanmiento, lentipoOdeanmiento //Mensaje del metodo utilizado
+
+    agregarTexto x20, finalConj, lenfinalConj
+    bl agregar_conjuntoFinal
+
     agregarTexto x20, msgExecuteTime, lenExecute  // Escribir mensaje "Tiempo de ejecución"
 
     LDR x0, =timeStart           // Carga la dirección de la variable `timeStart` en x0
@@ -325,10 +348,9 @@ escritura_archivo_texto:
 
 
 openReport:
-    //stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
     MOV x0, -100                 // openat con AT_FDCWD (directorio actual)
     LDR x1, =filename2            // Dirección del nombre del archivo
-    MOV x2, 101                  // O_WRONLY | O_CREAT
+    MOV x2, 1025                  // O_WRONLY | O_CREAT
     MOV x3, 0666                 // Permisos de lectura y escritura (sin ejecución)
     MOV x8, 56                   // Syscall número 56 (openat)
     SVC #0                       // Llamada al sistema
@@ -340,26 +362,72 @@ openReport:
     B op_r_end
 
     op_r_error:
-        //print  errorOpenFile, lenErrOpenFile
+        print  errorOpenFile, lenErrOpenFile
         //read 0, opcion, 1
-        //ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
         RET
 
     op_r_end:
         //print  createSucces, lenCreateSuccess
         //read 0, opcion, 1
-        //ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
         RET
 
 
+agregar_conjuntoIncial:
+    LDR x9, =count
+    LDR x9, [x9] // length => cantidad de numeros leidos del csv
+    MOV x7, 0
+    LDR x15, =array2
+
+    agregarTexto x20, corchetInicio, lencorchetInicio
+    loop_arrayINICIO:
+        stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
+        LDR w0, [x15], 4
+        LDR x1, =num
+        BL itoa
+        ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
+
+        agregarTexto x20, num, x10
+        agregarTexto x20, espacio, lenEspacio
+
+        ADD x7, x7, 1
+        CMP x9, x7
+        BNE loop_arrayINICIO
+    agregarTexto x20, corchetFin, lencorchetFin
+    agregarTexto x20, newline, lennewline
+    ret
+
+
+agregar_conjuntoFinal:
+    LDR x9, =count
+    LDR x9, [x9] // length => cantidad de numeros leidos del csv
+    MOV x7, 0
+    LDR x15, =array
+
+    agregarTexto x20, corchetInicio, lencorchetInicio
+    loop_arrayFinal:
+        stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
+        LDR w0, [x15], 4
+        LDR x1, =num
+        BL itoa
+        ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
+
+        agregarTexto x20, num, x10
+        agregarTexto x20, espacio, lenEspacio
+
+        ADD x7, x7, 1
+        CMP x9, x7
+        BNE loop_arrayFinal
+    agregarTexto x20, corchetFin, lencorchetFin
+    agregarTexto x20, newline, lennewline
+    ret
+
+
 closeFile:
-    //stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
     LDR x0, =fileDescriptor
     LDR x0, [x0]
     MOV x8, 57
     SVC 0
-    //ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
-    RET  //
+    RET  
 
 //***************************************** Fin del Area de reporte**************
 
@@ -545,7 +613,9 @@ print_array:
 //***************************************** Inicio del Buble Sort Decendente**************
 
 no_visualizar1:
+    getTime timeStart
     bl bubbleSort_desendente
+    getTime timeEnd
     // recorrer array y convertir a ascii
     LDR x9, =count
     LDR x9, [x9] // length => cantidad de numeros leidos del csv
@@ -566,6 +636,10 @@ no_visualizar1:
         BNE loop_arrays
     print corchetFin, lencorchetFin
     print newline, lennewline
+    print newline, lennewline
+
+    bl seleccion
+
     print precionarEnter, lenPrecionarEnter
     read 0, filename, 50
     b menuS
@@ -613,6 +687,7 @@ bubbleSort_desendente:
 
 
 bubbleSort_desendenteConPasos: 
+    getTime timeStart
     MOV x11, 0                      // Inicializar contador
     bl print_array2           // Llamar a la rutina para imprimir el arreglo
     LDR x0, =count          // Cargar la dirección de la variable count (número de elementos)
@@ -651,7 +726,12 @@ bubbleSort_desendenteConPasos:
         CMP x1, x0              // Comparar si todas las pasadas necesarias han sido completadas
         BNE bs_loop44            // Si no se ha completado, repetir el bucle externo
 
+        getTime timeEnd
         print newline, lennewline
+        print newline, lennewline
+
+        bl seleccion
+
         print precionarEnter, lenPrecionarEnter
         read 0, filename, 50
         b menuS
