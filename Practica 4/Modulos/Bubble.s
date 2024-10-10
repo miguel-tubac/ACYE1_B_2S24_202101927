@@ -506,7 +506,7 @@ bubbleSort:
 
 
 bubbleSort_ConPasos:
-    getTime timeStart
+    //getTime timeStart
     MOV x11, 0                      // Inicializar contador
     bl print_array           // Llamar a la rutina para imprimir el arreglo
     LDR x0, =count          // Cargar la dirección de la variable count (número de elementos)
@@ -545,11 +545,11 @@ bubbleSort_ConPasos:
         CMP x1, x0              // Comparar si todas las pasadas necesarias han sido completadas
         BNE bs_loop11            // Si no se ha completado, repetir el bucle externo
 
-        getTime timeEnd
+        //getTime timeEnd
         print newline, lennewline
-        print newline, lennewline
+        //print newline, lennewline
 
-        bl seleccion
+        //bl seleccion
 
         print precionarEnter, lenPrecionarEnter
         read 0, filename, 50
@@ -687,7 +687,7 @@ bubbleSort_desendente:
 
 
 bubbleSort_desendenteConPasos: 
-    getTime timeStart
+    //getTime timeStart
     MOV x11, 0                      // Inicializar contador
     bl print_array2           // Llamar a la rutina para imprimir el arreglo
     LDR x0, =count          // Cargar la dirección de la variable count (número de elementos)
@@ -726,11 +726,11 @@ bubbleSort_desendenteConPasos:
         CMP x1, x0              // Comparar si todas las pasadas necesarias han sido completadas
         BNE bs_loop44            // Si no se ha completado, repetir el bucle externo
 
-        getTime timeEnd
+        //getTime timeEnd
         print newline, lennewline
-        print newline, lennewline
+        //print newline, lennewline
 
-        bl seleccion
+        //bl seleccion
 
         print precionarEnter, lenPrecionarEnter
         read 0, filename, 50

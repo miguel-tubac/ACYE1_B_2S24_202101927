@@ -583,7 +583,7 @@ mergesort_pasos:
     MOV x11, 0                      // Inicializar contador
     bl print_array           // Llamar a la rutina para imprimir el arreglo
 
-    getTime timeStart
+    //getTime timeStart
     ldr x0, =array                        // address number table
     mov x1,0                                       // first element
     LDR x2, =count
@@ -592,15 +592,15 @@ mergesort_pasos:
     stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
     bl mergeSort2
     ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
-    getTime timeEnd
+    //getTime timeEnd
 
     MOV x11, -2                      // Inicializar contador
     bl print_array           // Llamar a la rutina para imprimir el arreglo
 
     print newline, lennewline
-    print newline, lennewline
+    //print newline, lennewline
 
-    bl seleccion
+    //bl seleccion
 
     print precionarEnter, lenPrecionarEnter
     read 0, filename, 50
@@ -955,7 +955,7 @@ mergesort_pasos_Desendente:
     MOV x11, 0                      // Inicializar contador
     bl print_array           // Llamar a la rutina para imprimir el arreglo
 
-    getTime timeStart
+    //getTime timeStart
     ldr x0, =array                        // address number table
     mov x1,0                                       // first element
     LDR x2, =count
@@ -964,15 +964,15 @@ mergesort_pasos_Desendente:
     stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
     bl mergeSort4
     ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
-    getTime timeEnd
+    //getTime timeEnd
 
     MOV x11, -2                      // Inicializar contador
     bl print_array           // Llamar a la rutina para imprimir el arreglo
 
     print newline, lennewline
-    print newline, lennewline
+    //print newline, lennewline
 
-    bl seleccion
+    //bl seleccion
 
     print precionarEnter, lenPrecionarEnter
     read 0, filename, 50

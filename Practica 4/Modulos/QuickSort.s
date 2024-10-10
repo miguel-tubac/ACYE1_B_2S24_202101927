@@ -2,11 +2,7 @@
 
 .extern array
 .extern count
-.global quicksort
 
-//.global copy_array
-//.global copy_array2
-//.global itoa
 
 .data
     clear:
@@ -350,6 +346,7 @@ escritura_archivo_texto:
     agregarTexto x20, num, x10               // Imprime el valor convertido (microsegundos) en el archivo
     agregarTexto x20, prefixMicro, lenPrefixMicro // Escribir prefijo "Microsegundos"
 
+    
     BL closeFile                 // Llama a la función para cerrar el archivo
     ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
     ret
@@ -607,7 +604,7 @@ quicksort_Pasos_inicio:
     MOV x11, 0                      // Inicializar contador
     bl print_array           // Llamar a la rutina para imprimir el arreglo
     //fin
-    getTime timeStart
+    //getTime timeStart
     //cargamos los valores iniciales
     LDR x0, =array
     MOV x1, 0
@@ -620,12 +617,12 @@ quicksort_Pasos_inicio:
     bl quicksort_Pasos
     // recuperar puntero del programa de la pila
     LDP x29, x30, [SP], #16
-    getTime timeEnd
+    //getTime timeEnd
 
     print newline, lennewline
-    print newline, lennewline
+    //print newline, lennewline
 
-    bl seleccion
+    //bl seleccion
 
     print precionarEnter, lenPrecionarEnter
     read 0, filename, 50
@@ -1026,7 +1023,7 @@ quicksort_Pasos_inicio2_Desendente:
     MOV x11, 0                      // Inicializar contador
     bl print_array           // Llamar a la rutina para imprimir el arreglo
     //fin
-    getTime timeStart
+    //getTime timeStart
     //cargamos los valores iniciales
     LDR x0, =array
     MOV x1, 0
@@ -1039,12 +1036,12 @@ quicksort_Pasos_inicio2_Desendente:
     bl quicksort_Pasos4
     // recuperar puntero del programa de la pila
     LDP x29, x30, [SP], #16
-    getTime timeEnd
+    //getTime timeEnd
 
     print newline, lennewline
-    print newline, lennewline
+    //print newline, lennewline
 
-    bl seleccion
+    //bl seleccion
 
     print precionarEnter, lenPrecionarEnter
     read 0, filename, 50

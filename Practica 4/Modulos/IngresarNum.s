@@ -1,10 +1,4 @@
 .global do_numeros
-//.global openFile
-//.global closeFile
-//.global readCSV
-//.global atoi
-//.global sepados_comas
-//.global reset_variables
 
 .data
     clear:
@@ -65,6 +59,10 @@
     readSuccess2:
         .asciz "Los datos se han leido Correctamente\n"
         lenReadSuccess2 = .- readSuccess2
+
+    invalidInputMessage:
+        .asciz "\n\n....ERROR UNICAMENTE SE ACEPTAN NUMEROS...."
+        lenInvalidInputMessage = . - invalidInputMessage
 
 
 .bss
@@ -248,6 +246,9 @@ readCSV:
         CMP w3, 10           // Comparar con el salto de línea (ASCII 10)
         BEQ retorno_Salto1    // Si es un salto de línea, procesar el último número pendiente
 
+        CMP w3, 57                 // Comparar con '9' (ASCII 57)
+        BGT error_invalid_input     // Si es mayor que '9', es un carácter no válido (letra o símbolo)
+
         MOV x20, x0             // Guardar el estado de retorno en `x20` para más adelante
         CBZ x0, rd_cv_num       // Si el valor de `x0` es 0, saltar a la conversión del número
 
@@ -306,6 +307,9 @@ sepados_comas:
             CMP w3, 10           // Comparar con el salto de línea (ASCII 10)
             BEQ retorno_Salto    // Si es un salto de línea, procesar el último número pendiente
 
+            CMP w3, 57                 // Comparar con '9' (ASCII 57)
+            BGT error_invalid_input     // Si es mayor que '9', es un carácter no válido (letra o símbolo)
+
             MOV x20, x0          // Guardar el estado de retorno en `x20`
             CBZ x0, rd_cv_num2    // Si `x0` es 0, convertir el número
 
@@ -349,6 +353,16 @@ sepados_comas:
             print salto, lenSalto  // Imprimir el salto de línea
             print readSuccess2, lenReadSuccess2 // Mensaje de éxito
             RET// Retornar de la función
+
+
+
+
+error_invalid_input:
+    // Mostrar un mensaje de error si se detecta un carácter inválido (letra o símbolo)
+    bl reset_variables
+    print invalidInputMessage, lenInvalidInputMessage // Imprimir el mensaje de error
+    b cont                         // Retornar y finalizar la función
+
 
 
 

@@ -534,7 +534,7 @@ insertionSortA:
 
 
 insertionSort_ConPasos:
-    getTime timeStart
+    //getTime timeStart
     MOV x11, 0                      // Inicializar contador
     bl print_array           // Llamar a la rutina para imprimir el arreglo
 
@@ -587,11 +587,11 @@ insertionSort_ConPasos:
 
     iloopend2:
         LDP x29, x30, [SP], #16      // Restaurar Frame Pointer y Link Register desde la pila
-        getTime timeEnd
+        //getTime timeEnd
         print newline, lennewline
-        print newline, lennewline
+        //print newline, lennewline
 
-        bl seleccion
+        //bl seleccion
 
         print precionarEnter, lenPrecionarEnter
         read 0, filename, 50
@@ -740,7 +740,7 @@ insertionSort_Decendente:
 
 
 insertionSort_ConPasos_Desendetes:
-    getTime timeStart
+    //getTime timeStart
     MOV x11, 0                      // Inicializar contador
     bl print_array           // Llamar a la rutina para imprimir el arreglo
 
@@ -793,11 +793,11 @@ insertionSort_ConPasos_Desendetes:
 
     iloopend4:
         LDP x29, x30, [SP], #16      // Restaurar Frame Pointer y Link Register desde la pila
-        getTime timeEnd
+        //getTime timeEnd
         print newline, lennewline
-        print newline, lennewline
+        //print newline, lennewline
 
-        bl seleccion
+        //bl seleccion
 
         print precionarEnter, lenPrecionarEnter
         read 0, filename, 50
