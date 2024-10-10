@@ -1,10 +1,10 @@
 .global do_numeros
-.global openFile
-.global closeFile
-.global readCSV
-.global atoi
-.global sepados_comas
-.global reset_variables
+//.global openFile
+//.global closeFile
+//.global readCSV
+//.global atoi
+//.global sepados_comas
+//.global reset_variables
 
 .data
     clear:

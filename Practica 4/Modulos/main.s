@@ -97,6 +97,9 @@
         .ascii "\n"
         lenEncabezado2 = . - encabezado2
 
+    time_format: 
+        .asciz "%d/%m/%Y %H:%M:%S\n"
+
 
 
 .bss
@@ -105,6 +108,9 @@
 
     fileDescriptor:
         .space 8
+
+    .lcomm time_buffer, 64
+
 
 
 // Macro para imprimir strings
@@ -129,6 +135,13 @@
     LDR x1, =\reg
     MOV x2, \len
     MOV x8, 64
+    SVC 0
+.endm
+
+.macro getTime storage
+    LDR x0, =\storage
+    MOV x1, 0
+    MOV x8, 96
     SVC 0
 .endm
 
@@ -262,6 +275,7 @@ reiniciarReporte:
     LDR x20, [x20]               // Cargar el descriptor del archivo en x20
 
     agregarTexto x20, encabezado2, lenEncabezado2
+    //bl obtener_Fecha
 
     bl closeFile
     ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
@@ -301,5 +315,34 @@ closeFile:
     SVC 0
     RET  
 
+
+/* 
+obtener_Fecha:
+    // Obtener la fecha y hora actual
+    mov x0, 0                    // gettimeofday
+    mov x1, 0                    // Argumento: struct timeval *
+    mov x2, 0                    // Argumento: struct timezone *
+    mov x8, 96                   // Syscall número 96 (gettimeofday)
+    svc #0                       // Llamada al sistema
+
+    // Verificar si la llamada fue exitosa
+    cmp x0, 0
+    blt error_gettime
+
+    // Formatear la fecha y hora
+    ldr x0, =time_buffer         // Buffer para almacenar la fecha y hora formateada
+    ldr x1, =time_format         // Formato de fecha y hora
+    bl strftime                  // Llamar a la función strftime
+
+    // Escribir la fecha y hora en el archivo
+    ldr x1, =time_buffer         // Datos a escribir
+    bl write_to_file             // Llamar a la función para escribir en el archivo
+
+    ret
+
+error_gettime:
+    // Manejo de error al obtener la fecha y hora
+    
+    ret*/
 
 

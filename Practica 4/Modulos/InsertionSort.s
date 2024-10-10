@@ -59,11 +59,11 @@ Este algoritmo se denomina de ordenación por comparación en el lugar porque or
         lenvisualizar = . - visualizar
     
     espacio:
-        .asciz " "
+        .ascii " "
         lenEspacio = .- espacio
     
     newline:
-        .asciz "\n"
+        .ascii "\n"
         lennewline = . - newline
 
     resulta:
@@ -83,8 +83,56 @@ Este algoritmo se denomina de ordenación por comparación en el lugar porque or
         lenconjInicial = . - conjInicial
 
     corchetFin:
-        .asciz " ]"
+        .ascii " ]"
         lencorchetFin = . - corchetFin
+
+    // datos del reporte
+    corchetInicio:
+        .ascii "[ "
+        lencorchetInicio = . - corchetInicio
+
+    msgExecuteTime:
+        .ascii "El tiempo de ejecución fue de: "
+        lenExecute = .- msgExecuteTime
+
+    prefixSec:
+        .ascii " segundos "
+        lenPrefixSec = .- prefixSec
+
+    prefixMicro:
+        .ascii " microsegundos\n\n"
+        lenPrefixMicro = .- prefixMicro
+
+    msgFilename:
+        .asciz "Ingrese el nombre del archivo: "
+        lenMsgFilename = .- msgFilename
+
+    errorOpenFile:
+        .asciz "Error al abrir el archivo\n"
+        lenErrOpenFile = .- errorOpenFile
+
+    createSucces:
+        .asciz "El Reporte Se Ha Abierto Correctamente\n"
+        lenCreateSuccess = .- createSucces
+
+    filename2:    
+        .asciz "salida.txt"     // Nombre del archivo
+
+    visualizar2:
+        .asciz "\nIngrese 1 si deceas agregar este ordenamiento y 0 si no: "
+        lenvisualizar2 = . - visualizar2
+
+    incialConj:
+        .ascii "Conjunto inicial: "
+        lenincialConj = .- incialConj
+    
+    tipoOdeanmiento:
+        .ascii "Ordenando con Insertion Sort...\n"
+        lentipoOdeanmiento = . - tipoOdeanmiento
+
+    finalConj:
+        .ascii "Conjunto ordenado: "
+        lenfinalConj = . -finalConj
 
 
 .bss
@@ -105,6 +153,16 @@ Este algoritmo se denomina de ordenación por comparación en el lugar porque or
     array2:
         .skip 1024
 
+    timeStart:
+        .xword 0, 0
+        
+    timeEnd:
+        .xword 0, 0
+
+    fileDescriptor:
+        .space 8
+
+
 
 // Macro para imprimir strings
 .macro print reg, len
@@ -121,6 +179,22 @@ Este algoritmo se denomina de ordenación por comparación en el lugar porque or
     LDR x1, =\buffer
     MOV x2, \len
     MOV x8, 63
+    SVC 0
+.endm
+
+
+.macro getTime storage
+    LDR x0, =\storage
+    MOV x1, 0
+    MOV x8, 169
+    SVC 0
+.endm
+
+.macro agregarTexto stdout, reg, len
+    MOV x0, \stdout
+    LDR x1, =\reg
+    MOV x2, \len
+    MOV x8, 64
     SVC 0
 .endm
 
@@ -214,13 +288,174 @@ do_InsertionSort:
         ret
 
 
+//***************************************** Inicio del Area de reporte**************
+
+seleccion:
+    print visualizar2, lenvisualizar2
+    read 0, opcion, 2
+
+    LDR x10, =opcion
+    LDRB w10, [x10]
+
+    cmp w10,49
+    beq escritura_archivo_texto
+
+    ret
+
+
+escritura_archivo_texto:
+    stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
+    BL openReport                // Llama a la función para abrir el archivo de reporte
+
+    LDR x20, =fileDescriptor     // Cargar la dirección de fileDescriptor
+    LDR x20, [x20]               // Cargar el descriptor del archivo en x20
+
+    agregarTexto x20, incialConj, lenincialConj //mensaje del conjunto inicial
+
+    bl agregar_conjuntoIncial //Agrega el conjunto incial
+
+    agregarTexto x20, tipoOdeanmiento, lentipoOdeanmiento //Mensaje del metodo utilizado
+
+    agregarTexto x20, finalConj, lenfinalConj
+    bl agregar_conjuntoFinal
+
+    agregarTexto x20, msgExecuteTime, lenExecute  // Escribir mensaje "Tiempo de ejecución"
+
+    LDR x0, =timeStart           // Carga la dirección de la variable `timeStart` en x0
+    LDR x1, =timeEnd             // Carga la dirección de la variable `timeEnd` en x1
+    LDR x2, [x0]                 // Carga la primera parte de `timeStart` en x2
+    LDR x3, [x1]                 // Carga la primera parte de `timeEnd` en x3
+
+    LDR x4, [x0, 8]              // Carga la segunda parte de `timeStart` (parte baja) en x4
+    LDR x5, [x1, 8]              // Carga la segunda parte de `timeEnd` (parte baja) en x5
+
+    SUB x3, x3, x2               // Resta la parte alta de `timeEnd` - `timeStart`
+    SUBS x5, x5, x4              // Resta la parte baja de `timeEnd` - `timeStart`, con actualización de banderas
+    CNEG x3, x3, MI              // Si el resultado es negativo, convierte x3 a su valor absoluto
+
+    MOV x15, x5                  // Mueve el valor de x5 (microsegundos restantes) a x15
+
+    stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
+    MOV x0, x3                   // Mueve el resultado de la resta de la parte alta a x0
+    LDR x1, =num                 // Carga la dirección de la variable `num` en x1
+    BL itoa                      // Convierte el valor en x0 (segundos) a una cadena de texto
+    ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
+
+    agregarTexto x20, num, x10               // Imprime el valor convertido (segundos) en el archivo
+    agregarTexto x20, prefixSec, lenPrefixSec // Imprime el prefijo "Segundos" en el archivo
+
+    stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
+    MOV x0, x15                  // Mueve el valor de x15 (microsegundos) a x0
+    LDR x1, =num                 // Carga la dirección de la variable `num` en x1
+    BL itoa                      // Convierte el valor en x0 (microsegundos) a una cadena de texto
+    ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
+
+    agregarTexto x20, num, x10               // Imprime el valor convertido (microsegundos) en el archivo
+    agregarTexto x20, prefixMicro, lenPrefixMicro // Escribir prefijo "Microsegundos"
+
+    
+    BL closeFile                 // Llama a la función para cerrar el archivo
+    ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
+    ret
+
+openReport:
+    MOV x0, -100                 // openat con AT_FDCWD (directorio actual)
+    LDR x1, =filename2            // Dirección del nombre del archivo
+    MOV x2, 1025                  // O_WRONLY | O_CREAT
+    MOV x3, 0666                 // Permisos de lectura y escritura (sin ejecución)
+    MOV x8, 56                   // Syscall número 56 (openat)
+    SVC #0                       // Llamada al sistema
+
+    CMP x0, 0
+    BLT op_r_error               // Si x0 es negativo, es un error
+    LDR x9, =fileDescriptor      // Dirección para almacenar el file descriptor
+    STR x0, [x9]                 // Guardar el file descriptor
+    B op_r_end
+
+    op_r_error:
+        print  errorOpenFile, lenErrOpenFile
+        //read 0, opcion, 1
+        RET
+
+    op_r_end:
+        //print  createSucces, lenCreateSuccess
+        //read 0, opcion, 1
+        RET
+
+
+agregar_conjuntoIncial:
+    LDR x9, =count
+    LDR x9, [x9] // length => cantidad de numeros leidos del csv
+    MOV x7, 0
+    LDR x15, =array2
+
+    agregarTexto x20, corchetInicio, lencorchetInicio
+    loop_arrayINICIO:
+        stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
+        LDR w0, [x15], 4
+        LDR x1, =num
+        BL itoa
+        ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
+
+        agregarTexto x20, num, x10
+        agregarTexto x20, espacio, lenEspacio
+
+        ADD x7, x7, 1
+        CMP x9, x7
+        BNE loop_arrayINICIO
+    agregarTexto x20, corchetFin, lencorchetFin
+    agregarTexto x20, newline, lennewline
+    ret
+
+
+agregar_conjuntoFinal:
+    LDR x9, =count
+    LDR x9, [x9] // length => cantidad de numeros leidos del csv
+    MOV x7, 0
+    LDR x15, =array
+
+    agregarTexto x20, corchetInicio, lencorchetInicio
+    loop_arrayFinal:
+        stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
+        LDR w0, [x15], 4
+        LDR x1, =num
+        BL itoa
+        ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
+
+        agregarTexto x20, num, x10
+        agregarTexto x20, espacio, lenEspacio
+
+        ADD x7, x7, 1
+        CMP x9, x7
+        BNE loop_arrayFinal
+    agregarTexto x20, corchetFin, lencorchetFin
+    agregarTexto x20, newline, lennewline
+    ret
+
+
+closeFile:
+    LDR x0, =fileDescriptor
+    LDR x0, [x0]
+    MOV x8, 57
+    SVC 0
+    RET  
+
+//***************************************** Fin del Area de reporte**************
+
+
+
+
+
+
 //***************************************** Inicio del Insertion Sort Acendete**************
 no_visualizar:
+    getTime timeStart
     ldr x0, =array
     ldr x1, =count
     ldr x1, [x1]
     //sub x1,x1,1
     bl insertionSortA
+    getTime timeEnd
     
     // recorrer array y convertir a ascii
     LDR x9, =count
@@ -242,6 +477,10 @@ no_visualizar:
         BNE loop_array
     print corchetFin, lencorchetFin
     print newline, lennewline
+    print newline, lennewline
+
+    bl seleccion
+
     print precionarEnter, lenPrecionarEnter
     read 0, filename, 50
     b menuS
@@ -295,6 +534,7 @@ insertionSortA:
 
 
 insertionSort_ConPasos:
+    getTime timeStart
     MOV x11, 0                      // Inicializar contador
     bl print_array           // Llamar a la rutina para imprimir el arreglo
 
@@ -347,7 +587,12 @@ insertionSort_ConPasos:
 
     iloopend2:
         LDP x29, x30, [SP], #16      // Restaurar Frame Pointer y Link Register desde la pila
+        getTime timeEnd
         print newline, lennewline
+        print newline, lennewline
+
+        bl seleccion
+
         print precionarEnter, lenPrecionarEnter
         read 0, filename, 50
         b menuS
@@ -410,11 +655,13 @@ print_array:
 
 //***************************************** Inicio del Insertion Sort Decendente**************
 no_visualizar2:
+    getTime timeStart
     ldr x0, =array
     ldr x1, =count
     ldr x1, [x1]
     //sub x1,x1,1
     bl insertionSort_Decendente
+    getTime timeEnd
     
     // recorrer array y convertir a ascii
     LDR x9, =count
@@ -436,6 +683,10 @@ no_visualizar2:
         BNE loop_array3
     print corchetFin, lencorchetFin
     print newline, lennewline
+    print newline, lennewline
+
+    bl seleccion
+
     print precionarEnter, lenPrecionarEnter
     read 0, filename, 50
     b menuS
@@ -489,6 +740,7 @@ insertionSort_Decendente:
 
 
 insertionSort_ConPasos_Desendetes:
+    getTime timeStart
     MOV x11, 0                      // Inicializar contador
     bl print_array           // Llamar a la rutina para imprimir el arreglo
 
@@ -541,7 +793,12 @@ insertionSort_ConPasos_Desendetes:
 
     iloopend4:
         LDP x29, x30, [SP], #16      // Restaurar Frame Pointer y Link Register desde la pila
+        getTime timeEnd
         print newline, lennewline
+        print newline, lennewline
+
+        bl seleccion
+
         print precionarEnter, lenPrecionarEnter
         read 0, filename, 50
         b menuS
