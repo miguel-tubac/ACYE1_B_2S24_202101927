@@ -1,162 +1,165 @@
-.global itoa
-.global _start
+.extern do_tabla
+
 
 .data
-salto:
-    .asciz "\n"
-    lenSalto = .- salto
+    clear:
+        .asciz "\x1B[2J\x1B[H"
+        lenClear = . - clear
+    
+    encabezado:
+        .asciz "Universidad De San Carlos De Guatemala\n"
+        .asciz "Facultad De Ingenieria\n"
+        .asciz "Escuela de Ciencias y Sistemas\n"
+        .asciz "Arquitectura de Computadores y Ensambladores 1\n"
+        .asciz "Seccion B\n"
+        .asciz "Miguel Adrian Tubac Agustin\n"
+        .asciz "202101927\n"
+        .asciz "\n"
+        .asciz "Presione Enter para continuar..."
+        lenEncabezado = . - encabezado
+    
+    menuPrincipal:
+        .asciz ">>>> Menu Principal <<<<\n"
+        .asciz "1. Iniciar la Tabla\n"
+        .asciz "2. Finalizar programa...\n"
+        lenMenuPrincipal = .- menuPrincipal
+    
+    msgOpcion:
+        .asciz "\nIngrese Una Opcion: "
+        lenOpcion = .- msgOpcion
+    
+    erronea:
+        .asciz "\nOpción no válida, intenta de nuevo..."
+        lenErronea = . - erronea
 
-espacio:
-    .asciz "\t"
-    lenEspacio = .- espacio
+    msgSalida:
+        .asciz "\n                                     ...¡¡¡¡Que tenga un feliz día!!!!..."
+        lenMsgSalida = . - msgSalida
 
-cols:
-    .asciz "ABCDEF"
+    newline:
+        .asciz "\n"
+        lennewline = . - newline
+    
+    opcionSalir:
+        .asciz "1. Salir\n"
+        .asciz "2. Regresar\n"
+        lenOpcionSalir = .- opcionSalir
 
-rows:
-    .asciz "123456"
 
 .bss
-arreglo:
-    .rept 36
-    .hword 0
-    .endr
-
-num:
-    .space 4
-
-val:
-    .space 1
+    opcion:
+        .space 5   // => El 5 indica cuantos BYTES se reservaran para la variable opcion
     
 
+
+
 .text
-.macro print stdout, reg, len
-    MOV x0, \stdout
+// Macro para imprimir strings
+.macro print reg, len
+    MOV x0, 1
     LDR x1, =\reg
     MOV x2, \len
     MOV x8, 64
     SVC 0
 .endm
 
-
-itoa:
-    // params: x0 => number, x1 => buffer address
-    MOV x10, 0  // contador de digitos a imprimir
-    MOV x12, 0  // flag para indicar si hay signo menos
-
-    CBZ x0, i_zero
-
-    MOV x2, 1
-    defineBase:
-        CMP x2, x0
-        MOV x5, 0
-        BGT cont
-        MOV x5, 10
-        MUL x2, x2, x5
-        B defineBase
-
-    cont:
-        CMP x0, 0  // Numero a convertir
-        BGT i_convertirAscii
-        B i_negative
-
-    i_zero:
-        ADD x10, x10, 1
-        MOV w5, 48
-        STRB w5, [x1], 1
-        B i_endConversion
-
-    i_negative:
-        MOV  x12, 1
-        MOV w5, 45
-        STRB w5, [x1], 1
-        NEG x0, x0
-
-    i_convertirAscii:
-        CBZ x2, i_endConversion
-        UDIV x3, x0, x2
-        CBZ x3, i_reduceBase
-
-        MOV w5, w3
-        ADD w5, w5, 48
-        STRB w5, [x1], 1
-        ADD x10, x10, 1
-
-        MUL x3, x3, x2
-        SUB x0, x0, x3
-
-        CMP x2, 1
-        BLE i_endConversion
-
-        i_reduceBase:
-            MOV x6, 10
-            UDIV x2, x2, x6
-
-            CBNZ x10, i_addZero
-            B i_convertirAscii
-
-        i_addZero:
-            CBNZ x3, i_convertirAscii
-            ADD x10, x10, 1
-            MOV w5, 48
-            STRB w5, [x1], 1
-            B i_convertirAscii
-
-    i_endConversion:
-        ADD x10, x10, x12
-        print 1, num, x10
-        RET
+.macro input
+    MOV x0, 0
+    LDR x1, =opcion
+    LDR x2, =5
+    MOV x8, 63
+    SVC 0
+.endm
 
 
 _start:
-    LDR x4, =arreglo    // cargar dirección de la matriz
-    MOV x9, 0  // index de slots
-    MOV x7, 0 // Contador de filas
-    LDR x18, =cols
-    LDR x19, =val
-    
-    printCols:
-        LDRB w20, [x18], 1
-        STRB w20, [x19]
+    print clear, lenClear
+    print encabezado, lenEncabezado
+    input
 
-        print 1, val, 1
-        print 1, espacio, lenEspacio
-        ADD x7, x7, 1
-        CMP x7, 6
-        BNE printCols
-        print 1, salto, lenSalto
+    menu: 
+        print clear, lenClear
+        print menuPrincipal, lenMenuPrincipal
+        print msgOpcion, lenOpcion
+        input
 
-    MOV x7, 0
+        LDR x10, =opcion
+        LDRB w10, [x10]
 
-    loop1:
-        MOV x13, 0 // Contador de columnas
-        loop2:
-            MOV x15, 0 
-            LDRH w15, [x4, x9, LSL #1]   // cargar valor del slot de la matriz
+        cmp w10, 49
+        beq inciar_tabla
 
-            // Convertir dato del slot a ASCII
-            MOV x0, x15
-            LDR x1, =num
-            BL itoa
+        cmp w10, 50
+        beq salida
 
-            print 1, espacio, lenEspacio
+        b invalido
 
-            ADD x9, x9, 1 // incrementar index de slots
-            ADD x13, x13, 1   // incrementar contador de columnas
-            CMP x13, 6
-            BNE loop2
+        invalido:
+            print erronea, lenErronea
+            B cont
 
-        print 1, salto, lenSalto
+        inciar_tabla:
+            bl do_tabla
+            B cont
 
-        ADD x9, x9, 1
-        ADD x7, x7, 1
-        CMP x7, 6
-        BNE loop1
+        cont:
+            input
+            B menu
 
-        // REVISAR VALORES QUE SE IMPRIMEN EXTRA EN LA MATRIZ
-        // DEBUGGEAR LA IMPRESION DE LA MATRIZ
+    end:
+        print msgSalida, lenMsgSalida 
 
-    exit:
-        MOV x0, 0
-        MOV x8, 93
-        SVC 0
+        input
+
+        // Mostrar el precionar enter
+        mov x0, 1              // Descriptor de archivo para stdout
+        ldr x1, =newline      // Dirección de nueva línea
+        mov x2, 1            // Tamaño de nueva línea
+        mov x8, 64             // Número de llamada al sistema para write
+        svc 0                  // Llamada al sistema
+
+        MOV x0, 0   // Codigo de error de la aplicacion -> 0: no hay error
+        MOV x8, 93  // Codigo de la llamada al sistema
+        SVC 0       // Ejecutar la llamada al sistema
+
+
+
+    salida:
+        print clear, lenClear
+        // Mostrar el precionar enter
+        mov x0, 1              // Descriptor de archivo para stdout
+        ldr x1, =newline      // Dirección de nueva línea
+        mov x2, 1            // Tamaño de nueva línea
+        mov x8, 64             // Número de llamada al sistema para write
+        svc 0                  // Llamada al sistema
+        
+        print opcionSalir, lenOpcionSalir
+        print msgOpcion, lenOpcion
+        input
+        
+        LDR x10, =opcion
+        LDRB w10, [x10]
+
+        cmp w10, 49
+        beq end
+
+        cmp w10, 50
+        beq menu
+
+        b salida
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
