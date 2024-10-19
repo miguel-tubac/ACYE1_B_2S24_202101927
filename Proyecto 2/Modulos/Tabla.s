@@ -25,7 +25,11 @@
         lenRegresandoInicio = . - regresandoInicio
 
     datoGuardar:
-        .asciz "GUARDAR"
+        .asciz "GUARDAR A1 EN A2"
+    
+    cadena_exit:
+        .asciz "#202101927-exit"
+        lenCadExit = . -cadena_exit
 
 
 
@@ -42,7 +46,7 @@
         .space 1              // Reservar 1 byte para almacenar un valor temporal
     
     opcion:
-        .space 5   // => El 5 indica cuantos BYTES se reservaran para la variable opcion
+        .space 50   // => El 5 indica cuantos BYTES se reservaran para la variable opcion
 
 
 
@@ -140,10 +144,48 @@ do_tabla:
 
     print salto, lenSalto  // Imprimir un salto de línea
     print msgOpcion, lenOpcion
-    read 0, opcion, 2
+    read 0, opcion, 50
+
+    // Remover el salto de línea (\n) de la cadena de entrada
+    ldr x1, =opcion         // Cargar la dirección de la cadena ingresada
+    mov x3, #0                   // Inicializar el índice
+
+    remover_nueva_linea:
+        ldrb w4, [x1, x3]            // Leer el carácter actual de la cadena
+        cmp w4, #10                  // Comparar con el código ASCII de '\n' (10)
+        beq poner_nulo               // Si es '\n', saltar a poner_nulo
+        cmp w4, #0                   // Si es nulo, terminar
+        //beq fin_remover_nueva_linea
+        add x3, x3, #1               // Incrementar el índice
+        b remover_nueva_linea        // Repetir
+
+    poner_nulo:
+        strb wzr, [x1, x3]           // Reemplazar '\n' con un carácter nulo
+
+    //******************************** Guardar *******************************************************
+    comparar_cadena_guardar:
+        ldr x1, =opcion         // Cargar la dirección de la cadena ingresada
+        ldr x2, =datoGuardar         // Cargar la dirección de la cadena "GUARDAR"
+        mov x3, #0                   // Inicializar el índice
+        
+    comparar_ciclo_guardar:
+        ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
+        ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "GUARDAR"
+        cmp w4, w5                   // Comparar ambos caracteres
+        bne no_coincide_guardar              // Si no coinciden, saltar a no_match
+        cbz w4, conside_guardar              // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
+        add x3, x3, #1               // Incrementar el índice
+        b comparar_ciclo_guardar              // Repetir el bucle
+
+    conside_guardar:
+        b mostrarTabla       
+
+    no_coincide_guardar:
+        b end
+    //************************************* FIN GUARDAR *********************************************
 
     //b mostrarTabla
-    b end
+    //b end
 
 
 
@@ -151,7 +193,6 @@ do_tabla:
 end:
     // Mostrar el precionar enter
     print regresandoInicio, lenRegresandoInicio             // Tamaño de nueva línea
-
     ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
     ret                          // Regresar al punto donde se llamó        
 
