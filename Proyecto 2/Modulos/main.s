@@ -1,5 +1,5 @@
 .extern do_tabla
-
+.global _start
 
 .data
     clear:
