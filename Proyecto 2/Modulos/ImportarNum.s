@@ -27,6 +27,9 @@
     cmdsep:
         .asciz "SEPARADO POR COMA"
 
+    comado_tabular:
+        .asciz "SEPARADO POR TABULADOR"
+
     errorImport:
         .asciz "Error en el Comando De Importación"
         lenError = .- errorImport
@@ -140,7 +143,21 @@ proc_import:
                 B cont_imp_loop //De lo contrario repite el bucle
 
                 CMP w2, w3
+                BNE comparar_tabulador //Saltar si NO es igual w2 con w3
+
+            //Aca se compara si la cadena es SEPARADO POR TABULADOR
+            STRB wzr, [x0]//Carga el valor de cero al filename
+            LDR x0, =comado_tabular //Caraga la palabra: SEPARADO POR TABULADOR
+            comparar_tabulador:
+                LDRB w2, [x0], 1 //Carga la primera letre de SEPARADO POR TABULADOR
+                LDRB w3, [x1], 1 //Se carga el primer valor del bufer de entrada
+
+                CBZ w2, end_proc_import //Comparar y saltar si es cero el caracter de w2
+                B comparar_tabulador //De lo contrario repite el bucle
+
+                CMP w2, w3
                 BNE imp_error //Saltar si NO es igual w2 con w3
+
     end_proc_import://Llegamos al final de la cadena
         RET//Retornamos a la rutina donde fue llamada
 
@@ -167,6 +184,9 @@ import_data:
 
         CMP w2, 44 //compara el caracter con el valor de coma (,)
         BEQ getIndex //salta si es igual a una coma: w2 == ,
+
+        CMP w2, 9 //compara el caracter con el valor del tabulador (\t)
+        BEQ getIndex //salta si es igual a un tabulador: w2 == \t
 
         CMP w2, 10 //Compara si es un salto de linea
         BEQ quitar //salta si es igual a un salto de linea: w2 == \n y le quita un espacio 
@@ -226,6 +246,9 @@ readCSV:
         CMP w3, 44              // Comparar si el carácter es una coma (',')
         BEQ rd_cv_num           // Si es coma, saltar a 'rd_cv_num'
 
+        CMP w3, 9              // Comparar si el carácter es una tabulador ('\t')
+        BEQ rd_cv_num           // Si es tabulador, saltar a 'rd_cv_num'
+
         CMP w3, 10              // Comparar si el carácter es un salto de línea (newline)
         BEQ poner_nulo           // Si es newline, saltar a 'rd_cv_num'
 
@@ -249,7 +272,7 @@ readCSV:
         LDRB w16, [x15], 1      // Obtener el valor de la columna desde 'listIndex'
 
         LDR x20, =arreglo       // Cargar la dirección del arreglo donde se almacenan los datos
-        MOV x22, 12              // Multiplicar la fila actual por 6 (supuesto tamaño de las filas)
+        MOV x22, 12              // Multiplicar la fila actual por 12 (supuesto tamaño de las filas)
         MUL x22, x21, x22       // Realizar la multiplicación para calcular el offset
         ADD x22, x16, x22       // Sumar el valor de la columna al offset
         STR x9, [x20, x22, LSL #3] // Almacenar el valor en el arreglo, ajustando el offset según el tamaño
@@ -269,7 +292,7 @@ readCSV:
     cls_num:
         STRB w13, [x12], 1      // Almacenar 0 en la dirección de 'num'
         ADD x14, x14, 1         // Incrementar x14 en 1 (contador de ceros añadidos)
-        CMP x14, 7              // Comparar si x14 ha alcanzado 7
+        CMP x14, 9              // Comparar si x14 ha alcanzado 7
         BNE cls_num             // Si no ha alcanzado 7, seguir limpiando
         LDR x10, =num           // Reiniciar el puntero de 'num'
         CBNZ x25, rd_num        // Si x25 no es 0, volver a 'rd_num' para leer más caracteres
