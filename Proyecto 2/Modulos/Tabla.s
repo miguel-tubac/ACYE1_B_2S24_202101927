@@ -334,7 +334,7 @@ itoa:
     // Si ya hemos impreso 5 dígitos, agregamos '!' y terminamos la conversión
     i_addExclamation:
         MOV w5, 33      // '!'
-        STRB w5, [x1], 1
+        STRB w5, [x1,-1] //Carga el simbolo ! en la posicion adecuada
         ADD x10, x10, 1      // Incrementa el contador de dígitos
         B i_endConversion
 

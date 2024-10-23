@@ -212,6 +212,9 @@ cargar_referencia:
             LDRB w3, [x11], 1           // Cargar el byte de 'character' en el registro w3
 
             CBZ w3, convertir_numero   // Si w3 es 0 (cadena vacía), saltar a convertir_numero
+
+            CMP w3, 42 //Este es el simbolo de '*'
+            BEQ obtener_retorno1 //Salta para obtener el valor de retorno
             
             CMP w3,45 //Compara si no es el simbolo negativo
             BEQ continuar_negativo //Salta para guardar el negativo
@@ -265,6 +268,13 @@ cargar_referencia:
         STR x5, [x10] //carga el valor numerico a num
         B obtener_columna_objetivo
 
+    obtener_retorno1:
+        MOV x3, 0 //Reiniciamos el valor de x3
+        LDR x3, =retorno//cargamos la direccion de la variable global retorno
+        LDR x3, [x3] //Cargamos el valor numerico
+        STR x3, [x24]//Cargamos el valor a num
+        B obtener_columna_objetivo
+
     convertir_numero:
         LDR x5, =num4            // Cargar la dirección de 'num4' en x5
         LDR x8, =num4            // Cargar la dirección de 'num4' en x8
@@ -308,6 +318,9 @@ cargar_referencia:
             LDRB w3, [x17], 1           // Cargar el byte de 'character' en el registro w3
 
             CBZ w3, convertir_numero2   // Si w3 es 0 (cadena vacía), saltar a convertir_numero2
+
+            CMP w3, 42 //Este es el simbolo de '*'
+            BEQ obtener_retorno2 //Salta para obtener el valor de retorno
             
             CMP w3,45 //Compara si no es el simbolo negativo
             BEQ continuar_negativo2 //Salta para guardar el negativo
@@ -356,6 +369,12 @@ cargar_referencia:
         STR x5, [x26] //carga el valor numerico a num6
         B sumar_variables
 
+    obtener_retorno2:
+        MOV x3, 0 //Reiniciamos el valor de x3
+        LDR x3, =retorno//cargamos la direccion de la variable global retorno
+        LDR x3, [x3] //Cargamos el valor numerico
+        STR x3, [x25]//Cargamos el valor a num
+        B sumar_variables
     
     convertir_numero2:
         LDR x5, =num5            // Cargar la dirección de 'num5' en x5
