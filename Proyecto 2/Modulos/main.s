@@ -41,6 +41,7 @@
         lennewline = . - newline
     
     opcionSalir:
+        .asciz ".... ¿Deseas Salir? ....\n\n"
         .asciz "1. Salir\n"
         .asciz "2. Regresar\n"
         lenOpcionSalir = .- opcionSalir

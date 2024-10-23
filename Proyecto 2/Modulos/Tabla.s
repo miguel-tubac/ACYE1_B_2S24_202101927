@@ -2,6 +2,7 @@
 
 
 .extern do_Import
+.extern do_Guardar
 
 .data
     clear:
@@ -29,13 +30,12 @@
 
     datoGuardar:
         .asciz "GUARDAR"
-    
-    cadena_exit:
-        .asciz "#202101927-exit"
-        lenCadExit = . -cadena_exit
 
     comando_importar:
         .asciz "IMPORTAR"
+
+    number64: 
+        .quad 100000  // Definir el número de 64 bits en memoria
 
 
 
@@ -171,14 +171,19 @@ do_tabla:
     comparar_ciclo_guardar:
         ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
         ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "GUARDAR"
+
+        cmp w4, 32      //Aca se compara con un espacio en blanco y si si entonces ya se termino de leer GUARDAR
+        BEQ conside_guardar //Salta a la validacion de importar
+
         cmp w4, w5                   // Comparar ambos caracteres
         bne no_coincide_guardar              // Si no coinciden, saltar a no_match
+
         cbz w4, conside_guardar              // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
         add x3, x3, #1               // Incrementar el índice
         b comparar_ciclo_guardar              // Repetir el bucle
 
     conside_guardar:
-        //bl do_Import
+        bl do_Guardar
         b mostrarTabla       
 
     no_coincide_guardar:
@@ -229,27 +234,16 @@ end:
 
 //******************************Aca se encuentra el area de conversio de entero a text y texto a entero */
 
-// Función para convertir un entero con la validación de signos a cadena ASCII
 itoa:
     // params: x0 => number, x1 => buffer address
     MOV x10, 0  // contador de digitos a imprimir
     MOV x12, 0  // flag para indicar si hay signo menos
+    MOV w2, 10000  // Base 10
+    CMP w0, 0  // Numero a convertir
+    BGT i_convertirAscii
+    CBZ w0, i_zero
 
-    CBZ x0, i_zero
-
-    MOV x2, 1
-    defineBase:
-        CMP x2, x0
-        MOV x5, 0
-        BGT cont
-        MOV x5, 10
-        MUL x2, x2, x5
-        B defineBase
-
-    cont:
-        CMP x0, 0  // Numero a convertir
-        BGT i_convertirAscii
-        B i_negative
+    B i_negative
 
     i_zero:
         ADD x10, x10, 1
@@ -261,33 +255,33 @@ itoa:
         MOV  x12, 1
         MOV w5, 45
         STRB w5, [x1], 1
-        NEG x0, x0
+        NEG w0, w0
 
     i_convertirAscii:
-        CBZ x2, i_endConversion
-        UDIV x3, x0, x2
-        CBZ x3, i_reduceBase
+        CBZ w2, i_endConversion
+        UDIV w3, w0, w2
+        CBZ w3, i_reduceBase
 
         MOV w5, w3
         ADD w5, w5, 48
         STRB w5, [x1], 1
         ADD x10, x10, 1
 
-        MUL x3, x3, x2
-        SUB x0, x0, x3
+        MUL w3, w3, w2
+        SUB w0, w0, w3
 
-        CMP x2, 1
+        CMP w2, 1
         BLE i_endConversion
 
         i_reduceBase:
-            MOV x6, 10
-            UDIV x2, x2, x6
+            MOV w6, 10
+            UDIV w2, w2, w6
 
-            CBNZ x10, i_addZero
+            CBNZ w10, i_addZero
             B i_convertirAscii
 
         i_addZero:
-            CBNZ x3, i_convertirAscii
+            CBNZ w3, i_convertirAscii
             ADD x10, x10, 1
             MOV w5, 48
             STRB w5, [x1], 1
@@ -296,48 +290,6 @@ itoa:
     i_endConversion:
         ADD x10, x10, x12
         print 1, num, x10
-        RET
 
-
-
-// Función para convertir cadena ASCII a un entero con la validación de signos
-atoi:
-    // params: x5, x8 => buffer address
-    SUB x5, x5, 1
-    a_c_digits:
-        LDRB w7, [x8], 1
-        CBZ w7, a_c_convert
-        CMP w7, 10
-        BEQ a_c_convert
-        B a_c_digits
-
-    a_c_convert:
-        SUB x8, x8, 2
-        MOV x4, 1
-        MOV x9, 0
-
-        a_c_loop:
-            LDRB w7, [x8], -1
-            CMP w7, 45
-            BEQ a_c_negative
-
-            SUB w7, w7, 48
-            MUL w7, w7, w4
-            ADD w9, w9, w7
-
-            MOV w6, 10
-            MUL w4, w4, w6
-
-            CMP x8, x5
-            BNE a_c_loop
-            B a_c_end
-
-        a_c_negative:
-            NEG w9, w9
-
-        a_c_end:
-            RET
-
-
-
+    RET  //
 
