@@ -30,6 +30,10 @@
     readSuccess:
         .asciz "El número se ha leido Correctamente\n"
         lenReadSuccess = .- readSuccess
+
+    errorColum:
+        .asciz "Error en la columna o fila de la Direccion de Celda"
+        lenerrorColum = .-errorColum
     
 
 
@@ -47,6 +51,9 @@
         .space 2
 
     num2:
+        .space 10
+    
+    num3:
         .space 10
 
 
@@ -79,6 +86,11 @@ do_Guardar:
     BL proc_import//Aca se captura la celda origen o numero a la celda destino
 
     BL cargar_numero//Aca se evalua la sigueinte estructura: GUARDAR 155 EN A23
+
+    LDR x5, =num2 //Se carga la variable num2
+    LDR x5, [x5]
+    CMP x5, 0       //Si la variable esta en cero siginifica que no entro en el anterior proceso por lo tanto ingresa a cargar_referencia
+    BEQ cargar_referencia //Aca se evalua la sigueinte estructura: GUARDAR B15 EN A23
 
     ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
     ret                          // Regresar al punto donde se llamó  
@@ -258,66 +270,117 @@ cargar_numero:
 
 
 
-
-
-/*cargar_numero:
+//Aca se evalua la sigueinte estructura: GUARDAR B15 EN A23
+cargar_referencia:
     LDR x10, =num               // Cargar la dirección de 'num' en el registro x10
     LDR x11,  =numeroCelda    // Cargar la dirección de 'numeroCelda' en x11
-    LDR x11, [x11]              // Cargar el valor de 'numeroCelda' en x11
-    MOV x21, 0                  // Inicializar el contador de filas en 0
+    LDR x21, =num2                  // Inicializar el contador de filas en 0
     MOV X15, 0                   // Inicializar el contador de columnas en 0
+    LDR x17, =numeroCeldaDestino
+    LDR x23, =num3
 
-    rd_num:
-        read x11, character, 1  // Leer un carácter desde 'numeroCelda' en 'character'
-        LDR x4, =character      // Cargar la dirección de 'character' en x4
-        LDRB w3, [x4]           // Cargar el byte de 'character' en el registro w3
-
-        CBZ w3, rd_cv_num       // Si w3 es 0 (cadena vacía), saltar a 'rd_cv_num'
-
-        CMP w3, 10              // Comparar si el carácter es un salto de línea (newline)
-        BEQ poner_nulo           // Si es newline, saltar a 'rd_cv_num'
+    obtener_direccion:
+        LDRB w3, [x11], 1           // Cargar el byte de 'character' en el registro w3
 
         CMP w3, 65              // Comparar si el carácter es la letra A
-        blt continuacion        // Si es menor que 'A', es un numero y continua y se guarda el valor en num
+        blt error_direccion        // Si es menor que 'A', es un eroor
 
         CMP w3, 75              // Comparar si el carácter es la letra K
-        bgt rd_cv_num           // Si es mayor que 'K', es inválido' , pendiente de validar
+        bgt error_direccion       // Si es mayor que 'K', es inválido'
 
-        calcular_columna:
-            SUB w15, w3, 65         //Como vamos a trabajar con las Columnas como letras A=65, por eso se le resta a la letra que venga
-            B calcular_fila         // Volver a leer el siguiente carácter de las filas
+        SUB w15, w3, 65         //Como vamos a trabajar con las Columnas como letras A=65, por eso se le resta a la letra que venga
+        B obtener_columna_direccion    //Continua para obtener la fila de referencia     
 
-        continuacion:
-            STRB w3, [x10], 1       // Almacenar el carácter leído en la dirección de 'num' y avanzar el puntero
-            B rd_num                // Volver a leer el siguiente carácter
-    
-    poner_nulo:
-        STRB WZR, [x10, -1]           // Reemplazar '\n' con un carácter nulo
-        b rd_cv_num
+    error_direccion:
+        print 1, errorColum, lenerrorColum
+        read 0, character, 2    // Leer dos caracteres de entrada es el enter
+        RET
 
-    calcular_fila:
-        read x11, character, 1  // Leer un carácter desde 'numeroCelda' en 'character'
-        LDR x4, =character      // Cargar la dirección de 'character' en x4
-        LDRB w3, [x4]           // Cargar el byte de 'character' en el registro w3
+    obtener_columna_direccion:
+        LDRB w3, [x11], 1
 
-        CBZ w3, rd_cv_num       // Si w3 es 0 (cadena vacía), saltar a 'rd_cv_num'
+        CBZ w3, obtener_numero //Cuando llege al final de la palabra de direccion A12 saltar a obtener el numero
 
-        CMP w3, 10              // Comparar si el carácter es un salto de línea (newline)
-        BEQ poner_nulo           // Si es newline, saltar a 'rd_cv_num'
+        CMP w3, 48              // Comparar si el carácter es el numero 1
+        blt error_direccion        // Si es menor que '1', es un error
 
-        STRB w3, [x21], 1 //Almacena bit a bit el numero de la fila
-        B calcular_fila //Repite el ciclo hasta encontrar un valor nulo 0
+        CMP w3, 57              // Comparar si el numero 9
+        bgt error_direccion        // Si es mayor que 9 es un error
 
+        STRB w3, [x21], 1      //Carga el numero de fila a la variable num2 esta en texto
+        B obtener_columna_direccion         // Volver a leer el siguiente carácter de las filas
 
-    rd_cv_num:
-        LDR x5, =num            // Cargar la dirección de 'num' en x5
-        LDR x8, =num            // Cargar la dirección de 'num' en x8
+    obtener_numero:
+        LDR x5, =num2            // Cargar la dirección de 'num' en x5
+        LDR x8, =num2            // Cargar la dirección de 'num' en x8
 
         STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
         BL atoi                 // Llamar a la función 'atoi' para convertir la cadena numérica
         LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+        MOV x21,x9          //Aca carga el valor de las filas 
+        SUB x21,x21,1
 
-        LDRB w16, [x15], 1      // Obtener el valor de la columna desde 'listIndex'
+        MOV x16, x15
+
+        LDR x20, =arreglo       // Cargar la dirección del arreglo donde se almacenan los datos
+        MOV x22, 12              // Multiplicar la fila actual por 12 (supuesto tamaño de las filas)
+        MUL x22, x21, x22       // Realizar la multiplicación para calcular el offset
+        ADD x22, x16, x22       // Sumar el valor de la columna al offset
+        LDR x5, [x20, x22, LSL #3] // Cargar el valor en num, ajustando el offset según el tamaño
+        STR x5, [x10] //carga el valor numerico a num
+
+
+
+
+    //Aca se obtine la direccion de la celda en donde se almacenara el numero anteriomente guardado en num:
+    obtener_columna_objetivo:
+        LDRB w3, [x17], 1
+
+        CMP w3, 65              // Comparar si el carácter es la letra A
+        blt error_columna_objetivo        // Si es menor que 'A', es un eroor
+
+        CMP w3, 75              // Comparar si el carácter es la letra K
+        bgt error_columna_objetivo       // Si es mayor que 'K', es inválido' 
+
+        SUB w15, w3, 65         //Como vamos a trabajar con las Columnas como letras A=65, por eso se le resta a la letra que venga
+        B calcular_fila_objetivo         // Volver a leer el siguiente carácter de las filas
+
+
+    error_columna_objetivo:
+        print 1, errorGeneral, lenErrorGeneral //Imprime el error de fila o columna
+        read 0, character, 2    // Leer dos caracteres de entrada
+        RET
+    
+    calcular_fila_objetivo: 
+        LDRB w3, [x17], #1   // Cargar el byte de 'character' en el registro w3, avanzar x17 en 1 byte
+
+        CBZ w3, guardar_valorEn_matriz    // Si w3 es 0 (cadena vacía), saltar a 'guardar_valorEn_matriz'
+
+        CMP w3, 48              // 
+        blt error_columna_objetivo        // 
+
+        CMP w3, 57              // 
+        bgt error_columna_objetivo    
+
+        STRB w3, [x23], 1
+        B calcular_fila_objetivo      // Repite el ciclo hasta encontrar un valor nulo 0
+
+
+    guardar_valorEn_matriz:
+        LDR x5, =num3            // Cargar la dirección de 'num3' en x5
+        LDR x8, =num3            // Cargar la dirección de 'num3' en x8
+
+        STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+        BL atoi                 // Llamar a la función 'atoi' para convertir la cadena numérica
+        LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+        MOV x21,x9
+        SUB x21,x21,1
+
+        LDR x5, =num            // Cargar la dirección de 'num' en x5
+        LDR x9, [x5]            //Carga el valor numerico de la matriz a x9
+
+        
+        MOV x16, x15
 
         LDR x20, =arreglo       // Cargar la dirección del arreglo donde se almacenan los datos
         MOV x22, 12              // Multiplicar la fila actual por 12 (supuesto tamaño de las filas)
@@ -325,31 +388,12 @@ cargar_numero:
         ADD x22, x16, x22       // Sumar el valor de la columna al offset
         STR x9, [x20, x22, LSL #3] // Almacenar el valor en el arreglo, ajustando el offset según el tamaño
 
-        LDR x12, =num           // Cargar la dirección de 'num' en x12
-        MOV w13, 0              // Inicializar w13 en 0
-        MOV x14, 0              // Inicializar x14 en 0
-        
-        LDR x20, =listIndex     // Cargar la dirección de 'listIndex' en x20
-        SUB x20, x15, x20       // Restar el índice actual de 'listIndex'
-        CMP x20, x17            // Comparar con el valor en x17 (tamaño esperado de columnas)
-        BNE cls_num             // Si no son iguales, saltar a 'cls_num'
-
-        LDR x15, =listIndex     // Reiniciar el índice de columnas
-        ADD x21, x21, 1         // Incrementar el contador de filas
-
-    cls_num:
-        STRB w13, [x12], 1      // Almacenar 0 en la dirección de 'num'
-        ADD x14, x14, 1         // Incrementar x14 en 1 (contador de ceros añadidos)
-        CMP x14, 9              // Comparar si x14 ha alcanzado 7
-        BNE cls_num             // Si no ha alcanzado 7, seguir limpiando
-        LDR x10, =num           // Reiniciar el puntero de 'num'
-        CBNZ x25, rd_num        // Si x25 no es 0, volver a 'rd_num' para leer más caracteres
-
-    rd_end:
+    rd_end2:
         print 1, salto, lenSalto // Imprimir un salto de línea
         print 1, readSuccess, lenReadSuccess // Imprimir el mensaje de éxito en la lectura
         read 0, character, 2    // Leer dos caracteres de entrada
-        RET                     // Retornar del procedimiento*/
+        RET                     // Retornar del procedimiento
+
 
 
 
@@ -429,6 +473,14 @@ reset_variables:
 
     // Reiniciar 'num2' (10 bytes)
     LDR x0, =num2              // Dirección base de 'num2'
+    MOV x1, #10                // Tamaño en bytes
+
+    STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+    BL clear_memory            // Llamada a la función para establecer a cero
+    LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+
+    // Reiniciar 'num3' (10 bytes)
+    LDR x0, =num3              // Dirección base de 'num3'
     MOV x1, #10                // Tamaño en bytes
 
     STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
