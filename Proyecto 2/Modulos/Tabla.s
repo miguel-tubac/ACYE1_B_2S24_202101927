@@ -3,6 +3,7 @@
 
 .extern do_Import
 .extern do_Guardar
+.extern do_suma
 
 .data
     clear:
@@ -33,6 +34,9 @@
 
     comando_importar:
         .asciz "IMPORTAR"
+    
+    comando_suma:
+        .asciz "SUMA"
 
     number64: 
         .word 1000000000  // Definir el número de 32 bits en memoria es decir hasta 10 cifras
@@ -42,6 +46,7 @@
 .bss
     .global arreglo
     .global opcion
+    .global retorno
 
     arreglo:
         .rept 276              // Reservar espacio para 276 valores de 64 bits  filas:23 columnas:12 =12*23
@@ -56,6 +61,9 @@
     
     opcion:
         .zero 50   // => El 50 indica cuantos BYTES se reservaran para la variable opcion
+
+    retorno:
+        .zero 1024//Esta es la variable de que guardara el retorno
 
 
 
@@ -217,8 +225,36 @@ do_tabla:
         b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
 
     no_coincide_importar:
-        b end 
+        b comparar_cadena_suma
     //************************************* FIN IMPORTAR *********************************************
+
+    //******************************** SUMA *******************************************************
+    comparar_cadena_suma:
+        ldr x1, =opcion         // Cargar la dirección de la cadena ingresada
+        ldr x2, =comando_suma         // Cargar la dirección de la cadena "SUMA"
+        mov x3, #0                   // Inicializar el índice
+        
+    comparar_ciclo_suma:
+        ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
+        ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "SUMA"
+
+        cmp w4, 32      //Aca se compara con un espacio en blanco y si si entonces ya se termino de leer SUMA
+        BEQ conside_suma //Salta a la validacion
+
+        cmp w4, w5                   // Comparar ambos caracteres
+        bne no_coincide_suma              // Si no coinciden, saltar a no_match
+
+        cbz w4, conside_suma              // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
+        add x3, x3, #1               // Incrementar el índice
+        b comparar_ciclo_suma              // Repetir el bucle
+
+    conside_suma:
+        bl do_suma //Salta al archivo Suma.s en donde se leen los datos
+        b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
+
+    no_coincide_suma:
+        b end 
+    //************************************* FIN SUMA *********************************************
 
 
 
@@ -272,7 +308,7 @@ itoa:
         ADD x10, x10, 1      // Incrementa el contador de dígitos
 
         // Si hemos impreso 5 dígitos, agregamos '!'
-        CMP x10, 4
+        CMP x10, 5
         BGT i_addExclamation
 
         MUL w3, w3, w2       // Multiplica el cociente por la base para restar el dígito
