@@ -35,7 +35,7 @@
         .asciz "IMPORTAR"
 
     number64: 
-        .quad 100000  // Definir el número de 64 bits en memoria
+        .word 1000000000  // Definir el número de 32 bits en memoria es decir hasta 10 cifras
 
 
 
@@ -103,6 +103,7 @@ do_tabla:
 
             print 1, val, 1       // Imprimir el valor en 'val'
             print 1, espacio, lenEspacio  // Imprimir un espacio
+            print 1, espacio, lenEspacio  // Imprimir un espacio
             ADD x7, x7, 1         // Incrementar el contador de filas
             CMP x7, 12            // Comparar el contador con 12
             BNE printCols         // Si no es igual, repetir el ciclo
@@ -127,6 +128,7 @@ do_tabla:
                 LDR x1, =num  // Cargar la dirección de 'num' en x1
                 BL itoa       // Llamar a la función itoa para convertir a cadena
 
+                print 1, espacio, lenEspacio  // Imprimir un espacio
                 print 1, espacio, lenEspacio  // Imprimir un espacio
 
                 ADD x9, x9, 1 // Incrementar el índice de slots
@@ -235,61 +237,75 @@ end:
 //******************************Aca se encuentra el area de conversio de entero a text y texto a entero */
 
 itoa:
-    // params: x0 => number, x1 => buffer address
-    MOV x10, 0  // contador de digitos a imprimir
-    MOV x12, 0  // flag para indicar si hay signo menos
-    MOV w2, 10000  // Base 10
-    CMP w0, 0  // Numero a convertir
-    BGT i_convertirAscii
-    CBZ w0, i_zero
+    // params: x0 => number (el número a convertir), x1 => buffer address (la dirección del buffer donde se almacenará la cadena)
+    MOV x10, 0      // Inicializa el contador de dígitos a 0
+    MOV x12, 0      // Inicializa la bandera para indicar si hay un signo negativo a 0
+    //MOV w2, 10000   // Establece la base en 10^4 (para manejar hasta 5 dígitos)
+    ldr w2, =number64
+    ldr w2, [x2]
+    CMP w0, 0       // Compara el número a convertir con 0
+    BGT i_convertirAscii  // Si el número es positivo, salta a la conversión ASCII
+    CBZ w0, i_zero  // Si el número es 0, salta al manejo de 0
 
-    B i_negative
+    B i_negative    // Si el número es negativo, salta al manejo de número negativo
 
     i_zero:
-        ADD x10, x10, 1
-        MOV w5, 48
-        STRB w5, [x1], 1
-        B i_endConversion
+        ADD x10, x10, 1     // Incrementa el contador de dígitos en 1
+        MOV w5, 48          // Carga el valor ASCII de '0' en w5
+        STRB w5, [x1], 1    // Almacena el carácter '0' en el buffer
+        B i_endConversion   // Salta al final de la conversión
 
     i_negative:
-        MOV  x12, 1
-        MOV w5, 45
-        STRB w5, [x1], 1
-        NEG w0, w0
+        MOV x12, 1          // Establece la bandera de signo negativo en 1
+        MOV w5, 45          // Carga el valor ASCII de '-' en w5
+        STRB w5, [x1], 1    // Almacena el carácter '-' en el buffer
+        NEG w0, w0          // Convierte el número a su valor positivo
 
     i_convertirAscii:
-        CBZ w2, i_endConversion
-        UDIV w3, w0, w2
-        CBZ w3, i_reduceBase
+        CBZ w2, i_endConversion  // Si la base es 0, termina la conversión
+        UDIV w3, w0, w2          // Divide el número por la base actual
+        CBZ w3, i_reduceBase     // Si el cociente es 0, reduce la base y continúa
 
-        MOV w5, w3
-        ADD w5, w5, 48
+        MOV w5, w3           // Mueve el resultado de la división a w5
+        ADD w5, w5, 48       // Convierte el dígito a su valor ASCII
+        STRB w5, [x1], 1     // Almacena el dígito en el buffer
+        ADD x10, x10, 1      // Incrementa el contador de dígitos
+
+        // Si hemos impreso 5 dígitos, agregamos '!'
+        CMP x10, 4
+        BGT i_addExclamation
+
+        MUL w3, w3, w2       // Multiplica el cociente por la base para restar el dígito
+        SUB w0, w0, w3       // Resta el valor del dígito del número original
+
+        CMP w2, 1            // Compara la base con 1
+        BLE i_endConversion   // Si la base es 1 o menor, termina la conversión
+
+    i_reduceBase:
+        MOV w6, 10           // Establece el divisor de base en 10
+        UDIV w2, w2, w6      // Reduce la base dividiéndola entre 10
+
+        CBNZ x10, i_addZero  // Si el contador de dígitos no es 0, agrega un cero
+        B i_convertirAscii   // Vuelve a convertir el siguiente dígito
+
+    i_addZero:
+        CBNZ w3, i_convertirAscii // Si el valor no es 0, convierte el siguiente dígito
+        ADD x10, x10, 1      // Incrementa el contador de dígitos
+        MOV w5, 48           // Carga el valor ASCII de '0' en w5
+        STRB w5, [x1], 1     // Almacena el carácter '0' en el buffer
+        B i_convertirAscii   // Continúa con la conversión de ASCII
+
+    // Si ya hemos impreso 5 dígitos, agregamos '!' y terminamos la conversión
+    i_addExclamation:
+        MOV w5, 33      // '!'
         STRB w5, [x1], 1
-        ADD x10, x10, 1
-
-        MUL w3, w3, w2
-        SUB w0, w0, w3
-
-        CMP w2, 1
-        BLE i_endConversion
-
-        i_reduceBase:
-            MOV w6, 10
-            UDIV w2, w2, w6
-
-            CBNZ w10, i_addZero
-            B i_convertirAscii
-
-        i_addZero:
-            CBNZ w3, i_convertirAscii
-            ADD x10, x10, 1
-            MOV w5, 48
-            STRB w5, [x1], 1
-            B i_convertirAscii
+        ADD x10, x10, 1      // Incrementa el contador de dígitos
+        B i_endConversion
 
     i_endConversion:
-        ADD x10, x10, x12
-        print 1, num, x10
+        ADD x10, x10, x12    // Agrega el signo negativo al contador de dígitos si es necesario
+        print 1, num, x10    // Imprime el número convertido (usando algún mecanismo de impresión)
 
-    RET  //
+        RET                  // Retorna de la función
+
 
