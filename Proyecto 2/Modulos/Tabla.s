@@ -8,6 +8,8 @@
 .extern do_multiplica
 .extern do_divicion
 .extern do_potencia
+.extern do_ologico
+.extern do_ylogico
 
 .data
     clear:
@@ -53,6 +55,12 @@
 
     comando_potencia:
         .asciz "POTENCIAR"
+    
+    comando_ologico:
+        .asciz "OLOGICO"
+
+    comando_ylogico:
+        .asciz "YLOGICO"
 
     number64: 
         .word 1000000000  // Definir el número de 32 bits en memoria es decir hasta 10 cifras
@@ -381,8 +389,64 @@ do_tabla:
         b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
 
     no_coincide_potencia:
-        b end 
+        b comparar_cadena_ologico 
     //************************************* FIN POTENCIAR *********************************************
+
+    //******************************** OLÓGICO *******************************************************
+    comparar_cadena_ologico:
+        ldr x1, =opcion         // Cargar la dirección de la cadena ingresada
+        ldr x2, =comando_ologico         // Cargar la dirección de la cadena "OLÓGICO"
+        mov x3, #0                   // Inicializar el índice
+        
+    comparar_ciclo_ologico:
+        ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
+        ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "OLÓGICO"
+
+        cmp w4, 32      //Aca se compara con un espacio en blanco y si si entonces ya se termino de leer OLÓGICO
+        BEQ conside_ologico //Salta a la validacion
+
+        cmp w4, w5                   // Comparar ambos caracteres
+        bne no_coincide_ologico              // Si no coinciden, saltar a no_match
+
+        cbz w4, conside_ologico              // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
+        add x3, x3, #1               // Incrementar el índice
+        b comparar_ciclo_ologico              // Repetir el bucle
+
+    conside_ologico:
+        bl do_ologico //Salta al archivo Ologico.s en donde se leen los datos
+        b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
+
+    no_coincide_ologico:
+        b comparar_cadena_ylogico
+    //************************************* FIN OLÓGICO *********************************************
+
+    //******************************** YLÓGICO *******************************************************
+    comparar_cadena_ylogico:
+        ldr x1, =opcion         // Cargar la dirección de la cadena ingresada
+        ldr x2, =comando_ylogico         // Cargar la dirección de la cadena "YLÓGICO"
+        mov x3, #0                   // Inicializar el índice
+        
+    comparar_ciclo_ylogico:
+        ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
+        ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "YLÓGICO"
+
+        cmp w4, 32      //Aca se compara con un espacio en blanco y si si entonces ya se termino de leer YLÓGICO
+        BEQ conside_ylogico //Salta a la validacion
+
+        cmp w4, w5                   // Comparar ambos caracteres
+        bne no_coincide_ylogico              // Si no coinciden, saltar a no_match
+
+        cbz w4, conside_ylogico              // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
+        add x3, x3, #1               // Incrementar el índice
+        b comparar_ciclo_ylogico              // Repetir el bucle
+
+    conside_ylogico:
+        bl do_ylogico //Salta al archivo Ylogico.s en donde se leen los datos
+        b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
+
+    no_coincide_ylogico:
+        b end 
+    //************************************* FIN YLÓGICO *********************************************
 
 
 
