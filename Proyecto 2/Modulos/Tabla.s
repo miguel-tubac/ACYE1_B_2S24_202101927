@@ -5,6 +5,7 @@
 .extern do_Guardar
 .extern do_suma
 .extern do_resta
+.extern do_multiplica
 
 .data
     clear:
@@ -41,6 +42,9 @@
 
     comando_resta:
         .asciz "RESTA"
+    
+    comando_multiplicacion:
+        .asciz "MULTIPLICACION"
 
     number64: 
         .word 1000000000  // Definir el número de 32 bits en memoria es decir hasta 10 cifras
@@ -285,8 +289,36 @@ do_tabla:
         b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
 
     no_coincide_resta:
-        b end 
+        b comparar_cadena_multi
     //************************************* FIN RESTA *********************************************
+
+    //******************************** MULTIPLICACION *******************************************************
+    comparar_cadena_multi:
+        ldr x1, =opcion         // Cargar la dirección de la cadena ingresada
+        ldr x2, =comando_multiplicacion         // Cargar la dirección de la cadena "MULTIPLICACION"
+        mov x3, #0                   // Inicializar el índice
+        
+    comparar_ciclo_multi:
+        ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
+        ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "MULTIPLICACION"
+
+        cmp w4, 32      //Aca se compara con un espacio en blanco y si si entonces ya se termino de leer MULTIPLICACION
+        BEQ conside_multi //Salta a la validacion
+
+        cmp w4, w5                   // Comparar ambos caracteres
+        bne no_coincide_multi              // Si no coinciden, saltar a no_match
+
+        cbz w4, conside_multi              // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
+        add x3, x3, #1               // Incrementar el índice
+        b comparar_ciclo_multi              // Repetir el bucle
+
+    conside_multi:
+        bl do_multiplica //Salta al archivo Multiplicacion.s en donde se leen los datos
+        b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
+
+    no_coincide_multi:
+        b end 
+    //************************************* FIN MULTIPLICACION *********************************************
 
 
 
