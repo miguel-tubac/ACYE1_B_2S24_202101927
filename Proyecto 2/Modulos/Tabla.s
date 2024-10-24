@@ -11,6 +11,7 @@
 .extern do_ologico
 .extern do_ylogico
 .extern do_oxlogico
+.extern do_nologico
 
 .data
     clear:
@@ -65,6 +66,9 @@
     
     comando_oxlogico:
         .asciz "OXLOGICO"
+
+    comando_nologico:
+        .asciz "NOLOGICO"
 
     number64: 
         .word 1000000000  // Definir el número de 32 bits en memoria es decir hasta 10 cifras
@@ -477,8 +481,36 @@ do_tabla:
         b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
 
     no_coincide_oxlogico:
-        b end 
+        b comparar_cadena_nologico 
     //************************************* FIN OXLÓGICO *********************************************
+
+    //******************************** NOLÓGICO *******************************************************
+    comparar_cadena_nologico:
+        ldr x1, =opcion         // Cargar la dirección de la cadena ingresada
+        ldr x2, =comando_nologico         // Cargar la dirección de la cadena "NOLÓGICO"
+        mov x3, #0                   // Inicializar el índice
+        
+    comparar_ciclo_nologico:
+        ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
+        ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "NOLÓGICO"
+
+        cmp w4, 32      //Aca se compara con un espacio en blanco y si si entonces ya se termino de leer NOLÓGICO
+        BEQ conside_nologico //Salta a la validacion
+
+        cmp w4, w5                   // Comparar ambos caracteres
+        bne no_coincide_nologico              // Si no coinciden, saltar a no_match
+
+        cbz w4, conside_nologico              // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
+        add x3, x3, #1               // Incrementar el índice
+        b comparar_ciclo_nologico              // Repetir el bucle
+
+    conside_nologico:
+        bl do_nologico //Salta al archivo Nologico.s en donde se leen los datos
+        b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
+
+    no_coincide_nologico:
+        b end 
+    //************************************* FIN NOLÓGICO *********************************************
 
 
 
