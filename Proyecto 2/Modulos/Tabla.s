@@ -7,6 +7,7 @@
 .extern do_resta
 .extern do_multiplica
 .extern do_divicion
+.extern do_potencia
 
 .data
     clear:
@@ -49,6 +50,9 @@
 
     comando_dividir:
         .asciz "DIVIDIR"
+
+    comando_potencia:
+        .asciz "POTENCIAR"
 
     number64: 
         .word 1000000000  // Definir el número de 32 bits en memoria es decir hasta 10 cifras
@@ -349,8 +353,36 @@ do_tabla:
         b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
 
     no_coincide_div:
-        b end 
+        b comparar_cadena_potencia 
     //************************************* FIN DIVIDIR *********************************************
+
+    //******************************** POTENCIAR *******************************************************
+    comparar_cadena_potencia:
+        ldr x1, =opcion         // Cargar la dirección de la cadena ingresada
+        ldr x2, =comando_potencia         // Cargar la dirección de la cadena "POTENCIAR"
+        mov x3, #0                   // Inicializar el índice
+        
+    comparar_ciclo_potencia:
+        ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
+        ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "POTENCIAR"
+
+        cmp w4, 32      //Aca se compara con un espacio en blanco y si si entonces ya se termino de leer POTENCIAR
+        BEQ conside_potencia //Salta a la validacion
+
+        cmp w4, w5                   // Comparar ambos caracteres
+        bne no_coincide_potencia              // Si no coinciden, saltar a no_match
+
+        cbz w4, conside_potencia              // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
+        add x3, x3, #1               // Incrementar el índice
+        b comparar_ciclo_potencia              // Repetir el bucle
+
+    conside_potencia:
+        bl do_potencia //Salta al archivo Multiplicacion.s en donde se leen los datos
+        b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
+
+    no_coincide_potencia:
+        b end 
+    //************************************* FIN POTENCIAR *********************************************
 
 
 
