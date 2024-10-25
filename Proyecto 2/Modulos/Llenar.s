@@ -129,6 +129,9 @@ proc_import:
         LDRB w2, [x0], 1 //Se carga el primer caracter de SUMA
         LDRB w3, [x1], 1 //Se carga un caracter del bufercomand
 
+        cmp w2, 32      //Aca se compara con un espacio en blanco y si si entonces ya se termino de leer LLENAR
+        BEQ espacio_extra //Salta a la validacion
+
         CBZ w2, espacio_extra //Comparar y saltar si es cero, es decir un espacio en blanco
         B continuacion //Si no es un espacio en blanco continua normal 
         espacio_extra:
@@ -325,7 +328,7 @@ cargar_referencia:
         LDR x3, [x3]//cargamos el valor
 
         CMP w0, w2 //Comparamos columna inicial con columna final
-        BEQ loop_imprimir1 //Si son de la misma columna 
+        BEQ inicio_loop1 //Si son de la misma columna 
 
         //CMP w0, w2 //Comparamos columna inicial con columna final
         //BLT loop_imprimir2 //Si columna inicial < columna final
@@ -335,12 +338,33 @@ cargar_referencia:
             read 0, character, 2    // Leer dos caracteres de entrada
             RET                     // Retornar del procedimiento
 
+        inicio_loop1:
+        LDR x9, =num2 //cargamos el valor de columna
+        LDR x9, [x9]//cargamos el valor de columna
+        ADD x9, x9, 65 //Convierte el valor a valor ascii
+        LDR x10, =num5 //Cargamos num5
+        STR x9, [x10]  //Cargamos el valor ascii a num5
         loop_imprimir1:
+            STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
+            STP x2, x3, [sp, #-16]!       // Guardar registros adicionales
             print 1, salto, lenSalto // Imprimir un salto de línea
             print 1, dato_valor, lendato_valor //Imprime el mensaje del valor
+            print 1, num5, 2
+            LDP x2, x3, [sp], #16         // Restaurar x9 y x10
+            LDP x0, x1, [sp], #16          // Restaurar x0 y x1
 
-            print 1, dpuntos, lenDpuntos //Imprime los dos puntos
+            STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
+            STP x2, x3, [sp, #-16]!       // Guardar registros adicionales
+
+            MOV x0, x1   // Mover el valor en x11 a x0   el numeral de las filas 
+            LDR x1, =num6  // Cargar la dirección de 'num' en x1
+            STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+            BL itoa       // Llamar a la función itoa para convertir a cadena
+            LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
             
+            print 1, dpuntos, lenDpuntos //Imprime los dos puntos
+            LDP x2, x3, [sp], #16         // Restaurar x9 y x10
+            LDP x0, x1, [sp], #16          // Restaurar x0 y x1
             
 
             
@@ -348,7 +372,7 @@ cargar_referencia:
             
             ADD x1, x1, 1   //Agregamos uno a la fila inicial
             CMP w1, w3      //Comparamos fila inicial con fila final
-            BEQ rd_end2     //Si fila inicial == fila final    finalizamos el programa
+            BGT rd_end2     //Si fila inicial > fila final    finalizamos el programa
             B loop_imprimir1 //Continuamos en la sigueinte iteracion
 
         //loop_imprimir2:
@@ -444,7 +468,7 @@ itoa:
 
     i_endConversion:
         ADD x10, x10, x12    // Agrega el signo negativo al contador de dígitos si es necesario
-        print 1, num, x10    // Imprime el número convertido (usando algún mecanismo de impresión)
+        print 1, num6, x10    // Imprime el número convertido (usando algún mecanismo de impresión)
 
         RET                  // Retorna de la función
 
