@@ -2,7 +2,6 @@
 
 .extern arreglo
 .extern opcion
-.extern retorno
 
 
 .data
@@ -37,16 +36,20 @@
         lenerrorNumero = .-errorNumero
 
     dato_valor:
-        .asciz "VALOR PARA "
+        .asciz "\tVALOR PARA "
         lendato_valor = .-dato_valor
 
     dpuntos:
-        .asciz ":"
+        .asciz ": "
         lenDpuntos = .- dpuntos
 
     errorCol:
         .asciz "\n...La columna INICIAL debe ser menor a la columna FINAL..."
         lenerrorCol = .- errorCol
+
+    errorFila:
+        .asciz "\n...La fila INICIAL y FINAL debe ser menor o igual a 23..."
+        lenerrorFila = .-errorFila
     
 
 
@@ -76,6 +79,9 @@
         .space 10
 
     num6:
+        .space 10
+
+    valor:
         .space 10
 
 
@@ -327,17 +333,31 @@ cargar_referencia:
         LDR x3, =num4 //cargamos el cuarto numero
         LDR x3, [x3]//cargamos el valor
 
-        CMP w0, w2 //Comparamos columna inicial con columna final
-        BEQ inicio_loop1 //Si son de la misma columna 
+        CMP w1, 23 //Comparamos la fila inicio con 23
+        BGT error_fila //Si fila inicio > 23
 
-        //CMP w0, w2 //Comparamos columna inicial con columna final
-        //BLT loop_imprimir2 //Si columna inicial < columna final
+        CMP w3, 23 //Comparamos la fila final con 23
+        BGT error_fila //Si fila fianl > 23
+        B comprovaciones // Si no se cimple na da de lo anterior Saltamos a ingresar datos
+
+        error_fila:
+            print 1, errorFila, lenerrorFila //Este error se muestra cuando la fial es mayor a 23
+            read 0, character, 2    // Leer dos caracteres de entrada
+            RET                     // Retornar del procedimiento
+
+        comprovaciones:
+            CMP w0, w2 //Comparamos columna inicial con columna final
+            BEQ inicio_loop1 //Si son de la misma columna 
+
+            CMP w0, w2 //Comparamos columna inicial con columna final
+            BLT inicio_loop2 //Si columna inicial < columna final
 
         error_columna:
             print 1, errorCol, lenerrorCol //Este error se muestra cuando la columna inicial es mayor a la final
             read 0, character, 2    // Leer dos caracteres de entrada
             RET                     // Retornar del procedimiento
 
+        // Aca se validan unicamente cuando es en la misma columna
         inicio_loop1:
         LDR x9, =num2 //cargamos el valor de columna
         LDR x9, [x9]//cargamos el valor de columna
@@ -363,10 +383,39 @@ cargar_referencia:
             LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
             
             print 1, dpuntos, lenDpuntos //Imprime los dos puntos
+            read 0, valor, 10
+
+            LDR x5, =valor            // Cargar la dirección de 'num' en x5
+            LDR x8, =valor            // Cargar la dirección de 'num' en x8
+
+            STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+            BL atoi                 // Llamar a la función 'atoi' para convertir la cadena numérica
+            LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+
+            STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+            BL reset_valor
+            LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+            
+            LDR x5, =valor //Cargamos de nuevo el num3 ya reiniciado
+            STR x9, [x5] //Guardamos el valor
+
             LDP x2, x3, [sp], #16         // Restaurar x9 y x10
             LDP x0, x1, [sp], #16          // Restaurar x0 y x1
             
 
+            //En esta parte se carga el valor al arreglo
+            LDR x9, =valor 
+            LDR x9, [x9] //Aca se encuantra el valor a cargar
+            
+            MOV x16, x0      // Obtener el valor de la columna
+            MOV x21, x1 //Cargamos el valor de la fila
+            SUB x21, x21, 1 //Obtenemos el valor correcto de las filas
+
+            LDR x20, =arreglo       // Cargar la dirección del arreglo donde se almacenan los datos
+            MOV x22, 12              // Multiplicar la fila actual por 12 (supuesto tamaño de las filas)
+            MUL x22, x21, x22       // Realizar la multiplicación para calcular el offset
+            ADD x22, x16, x22       // Sumar el valor de la columna al offset
+            STR x9, [x20, x22, LSL #3] // Almacenar el valor en el arreglo, ajustando el offset según el tamaño
             
             
             
@@ -375,7 +424,81 @@ cargar_referencia:
             BGT rd_end2     //Si fila inicial > fila final    finalizamos el programa
             B loop_imprimir1 //Continuamos en la sigueinte iteracion
 
-        //loop_imprimir2:
+
+
+        // Aca se validan unicamente cuando es en la misma fila
+        inicio_loop2:
+        STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
+        STP x2, x3, [sp, #-16]!       // Guardar registros adicionales
+
+        MOV x0, x1
+        LDR x1, =num5         
+
+        STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+        BL itoa2                 
+        LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+        
+        LDP x2, x3, [sp], #16         // Restaurar x9 y x10
+        LDP x0, x1, [sp], #16          // Restaurar x0 y x1
+        loop_imprimir2:
+            STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
+            STP x2, x3, [sp, #-16]!       // Guardar registros adicionales
+            print 1, salto, lenSalto // Imprimir un salto de línea
+            print 1, dato_valor, lendato_valor //Imprime el mensaje del valor
+            LDP x2, x3, [sp], #16         // Restaurar x9 y x10
+            LDP x0, x1, [sp], #16          // Restaurar x0 y x1
+
+            STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
+            STP x2, x3, [sp, #-16]!       // Guardar registros adicionales
+
+            ADD x9, x0, 65 //Convierte el valor a valor ascii
+            LDR x10, =num6 //Cargamos num6
+            STR x9, [x10]  //Cargamos el valor ascii a num5
+            print 1, num6, 2 //Imprimimos la columna
+
+            print 1, num5, 4    //imprimimos el valor de la fila
+            print 1, dpuntos, lenDpuntos //Imprime los dos puntos
+            read 0, valor, 10
+
+            LDR x5, =valor            // Cargar la dirección de 'num' en x5
+            LDR x8, =valor            // Cargar la dirección de 'num' en x8
+
+            STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+            BL atoi                 // Llamar a la función 'atoi' para convertir la cadena numérica
+            LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+
+            STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+            BL reset_valor
+            LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+            
+            LDR x5, =valor //Cargamos de nuevo el num3 ya reiniciado
+            STR x9, [x5] //Guardamos el valor
+
+            LDP x2, x3, [sp], #16         // Restaurar x9 y x10
+            LDP x0, x1, [sp], #16          // Restaurar x0 y x1
+            
+
+            //En esta parte se carga el valor al arreglo
+            LDR x9, =valor 
+            LDR x9, [x9] //Aca se encuantra el valor a cargar
+            
+            MOV x16, x0      // Obtener el valor de la columna
+            MOV x21, x1 //Cargamos el valor de la fila
+            SUB x21, x21, 1 //Obtenemos el valor correcto de las filas
+
+            LDR x20, =arreglo       // Cargar la dirección del arreglo donde se almacenan los datos
+            MOV x22, 12              // Multiplicar la fila actual por 12 (supuesto tamaño de las filas)
+            MUL x22, x21, x22       // Realizar la multiplicación para calcular el offset
+            ADD x22, x16, x22       // Sumar el valor de la columna al offset
+            STR x9, [x20, x22, LSL #3] // Almacenar el valor en el arreglo, ajustando el offset según el tamaño
+            
+            
+            
+            ADD x0, x0, 1   //Agregamos uno a la columna inicial
+            CMP w0, w2      //Comparamos columna inicial con columna final
+            BGT rd_end2     //Si columna inicial > columna final    finalizamos el programa
+            B loop_imprimir2 //Continuamos en la sigueinte iteracion
+
 
 
 
@@ -519,7 +642,77 @@ atoi:
 
 
 
+itoa2:
+    // params: x0 => number (el número a convertir), x1 => buffer address (la dirección del buffer donde se almacenará la cadena)
+    MOV x10, 0      // Inicializa el contador de dígitos a 0
+    MOV x12, 0      // Inicializa la bandera para indicar si hay un signo negativo a 0
+    MOV w2, 10000   // Establece la base en 10^4 (para manejar hasta 5 dígitos)
+    CMP w0, 0       // Compara el número a convertir con 0
+    BGT i_convertirAscii2  // Si el número es positivo, salta a la conversión ASCII
+    CBZ w0, i_zero2  // Si el número es 0, salta al manejo de 0
 
+    B i_negative2    // Si el número es negativo, salta al manejo de número negativo
+
+    i_zero2:
+        ADD x10, x10, 1     // Incrementa el contador de dígitos en 1
+        MOV w5, 48          // Carga el valor ASCII de '0' en w5
+        STRB w5, [x1], 1    // Almacena el carácter '0' en el buffer
+        B i_endConversion2   // Salta al final de la conversión
+
+    i_negative2:
+        MOV x12, 1          // Establece la bandera de signo negativo en 1
+        MOV w5, 45          // Carga el valor ASCII de '-' en w5
+        STRB w5, [x1], 1    // Almacena el carácter '-' en el buffer
+        NEG w0, w0          // Convierte el número a su valor positivo
+
+    i_convertirAscii2:
+        CBZ w2, i_endConversion2  // Si la base es 0, termina la conversión
+        UDIV w3, w0, w2          // Divide el número por la base actual
+        CBZ w3, i_reduceBase2     // Si el cociente es 0, reduce la base y continúa
+
+        MOV w5, w3           // Mueve el resultado de la división a w5
+        ADD w5, w5, 48       // Convierte el dígito a su valor ASCII
+        STRB w5, [x1], 1     // Almacena el dígito en el buffer
+        ADD x10, x10, 1      // Incrementa el contador de dígitos
+
+        MUL w3, w3, w2       // Multiplica el cociente por la base para restar el dígito
+        SUB w0, w0, w3       // Resta el valor del dígito del número original
+
+        CMP w2, 1            // Compara la base con 1
+        BLE i_endConversion2   // Si la base es 1 o menor, termina la conversión
+
+    i_reduceBase2:
+        MOV w6, 10           // Establece el divisor de base en 10
+        UDIV w2, w2, w6      // Reduce la base dividiéndola entre 10
+
+        CBNZ x10, i_addZero2  // Si el contador de dígitos no es 0, agrega un cero
+        B i_convertirAscii2   // Vuelve a convertir el siguiente dígito
+
+    i_addZero2:
+        CBNZ w3, i_convertirAscii2 // Si el valor no es 0, convierte el siguiente dígito
+        ADD x10, x10, 1      // Incrementa el contador de dígitos
+        MOV w5, 48           // Carga el valor ASCII de '0' en w5
+        STRB w5, [x1], 1     // Almacena el carácter '0' en el buffer
+        B i_convertirAscii2   // Continúa con la conversión de ASCII
+
+    i_endConversion2:
+        ADD x10, x10, x12    // Agrega el signo negativo al contador de dígitos si es necesario
+        //print 1, num6, x10    // Imprime el número convertido (usando algún mecanismo de impresión)
+
+        RET                  // Retorna de la función
+
+
+
+
+reset_valor:
+    // Reiniciar 'num2' (10 bytes)
+    LDR x0, =valor               // Dirección base de 'valor'
+    MOV x1, #10                // Tamaño en bytes
+
+    STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+    BL clear_memory            // Llamada a la función para establecer a cero
+    LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+    RET
 
 
 
@@ -635,6 +828,14 @@ reset_variables:
 
     // Reiniciar 'num6' (10 bytes)
     LDR x0, =num6              // Dirección base de 'num6'
+    MOV x1, #10                // Tamaño en bytes
+
+    STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+    BL clear_memory            // Llamada a la función para establecer a cero
+    LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+
+    // Reiniciar 'num6' (10 bytes)
+    LDR x0, =valor              // Dirección base de 'valor'
     MOV x1, #10                // Tamaño en bytes
 
     STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
