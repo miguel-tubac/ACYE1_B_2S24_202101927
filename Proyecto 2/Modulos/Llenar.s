@@ -50,6 +50,10 @@
     errorFila:
         .asciz "\n...La fila INICIAL y FINAL debe ser menor o igual a 23..."
         lenerrorFila = .-errorFila
+
+    errorValor:
+        .asciz "\n  ! Ingresar un valor valido "
+        lenerrorValor = . -errorValor
     
 
 
@@ -365,13 +369,14 @@ cargar_referencia:
         LDR x10, =num5 //Cargamos num5
         STR x9, [x10]  //Cargamos el valor ascii a num5
         loop_imprimir1:
-            STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
-            STP x2, x3, [sp, #-16]!       // Guardar registros adicionales
-            print 1, salto, lenSalto // Imprimir un salto de línea
-            print 1, dato_valor, lendato_valor //Imprime el mensaje del valor
-            print 1, num5, 2
-            LDP x2, x3, [sp], #16         // Restaurar x9 y x10
-            LDP x0, x1, [sp], #16          // Restaurar x0 y x1
+            incorrecto_valor:
+                STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
+                STP x2, x3, [sp, #-16]!       // Guardar registros adicionales
+                print 1, salto, lenSalto // Imprimir un salto de línea
+                print 1, dato_valor, lendato_valor //Imprime el mensaje del valor
+                print 1, num5, 2
+                LDP x2, x3, [sp], #16         // Restaurar x9 y x10
+                LDP x0, x1, [sp], #16          // Restaurar x0 y x1
 
             STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
             STP x2, x3, [sp, #-16]!       // Guardar registros adicionales
@@ -385,8 +390,22 @@ cargar_referencia:
             print 1, dpuntos, lenDpuntos //Imprime los dos puntos
             read 0, valor, 10
 
-            LDR x5, =valor            // Cargar la dirección de 'num' en x5
-            LDR x8, =valor            // Cargar la dirección de 'num' en x8
+            STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+            BL validar_numero_ingresado //Aca se valida si el numero es correcto
+            LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+
+            CMP w3, 10
+            BEQ valor_correto  //Esto significa que el numero es correcto
+            B incorrecto_valor2    //Esto significa que es incorrecto
+
+            incorrecto_valor2: 
+                LDP x2, x3, [sp], #16         // Restaurar x9 y x10
+                LDP x0, x1, [sp], #16          // Restaurar x0 y x1
+                B incorrecto_valor
+
+            valor_correto:
+                LDR x5, =valor            // Cargar la dirección de 'num' en x5
+                LDR x8, =valor            // Cargar la dirección de 'num' en x8
 
             STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
             BL atoi                 // Llamar a la función 'atoi' para convertir la cadena numérica
@@ -441,12 +460,13 @@ cargar_referencia:
         LDP x2, x3, [sp], #16         // Restaurar x9 y x10
         LDP x0, x1, [sp], #16          // Restaurar x0 y x1
         loop_imprimir2:
-            STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
-            STP x2, x3, [sp, #-16]!       // Guardar registros adicionales
-            print 1, salto, lenSalto // Imprimir un salto de línea
-            print 1, dato_valor, lendato_valor //Imprime el mensaje del valor
-            LDP x2, x3, [sp], #16         // Restaurar x9 y x10
-            LDP x0, x1, [sp], #16          // Restaurar x0 y x1
+            incorrecto_valor4:
+                STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
+                STP x2, x3, [sp, #-16]!       // Guardar registros adicionales
+                print 1, salto, lenSalto // Imprimir un salto de línea
+                print 1, dato_valor, lendato_valor //Imprime el mensaje del valor
+                LDP x2, x3, [sp], #16         // Restaurar x9 y x10
+                LDP x0, x1, [sp], #16          // Restaurar x0 y x1
 
             STP x0, x1, [sp, #-16]!        // Guardar x0 y x1 en la pila
             STP x2, x3, [sp, #-16]!       // Guardar registros adicionales
@@ -460,8 +480,22 @@ cargar_referencia:
             print 1, dpuntos, lenDpuntos //Imprime los dos puntos
             read 0, valor, 10
 
-            LDR x5, =valor            // Cargar la dirección de 'num' en x5
-            LDR x8, =valor            // Cargar la dirección de 'num' en x8
+            STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+            BL validar_numero_ingresado //Aca se valida si el numero es correcto
+            LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+
+            CMP w3, 10
+            BEQ valor_correto1  //Esto significa que el numero es correcto
+            B incorrecto_valor3    //Esto significa que es incorrecto
+
+            incorrecto_valor3:
+                LDP x2, x3, [sp], #16         // Restaurar x9 y x10
+                LDP x0, x1, [sp], #16          // Restaurar x0 y x1
+                B incorrecto_valor4
+
+            valor_correto1:
+                LDR x5, =valor            // Cargar la dirección de 'num' en x5
+                LDR x8, =valor            // Cargar la dirección de 'num' en x8
 
             STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
             BL atoi                 // Llamar a la función 'atoi' para convertir la cadena numérica
@@ -511,6 +545,38 @@ cargar_referencia:
 
 
 
+
+
+validar_numero_ingresado:
+    MOV x3, XZR //Inicializamos el valor con cero
+    LDR x11, =valor //Cargamos la direccion del valor
+        bucle_numero:
+            LDRB w3, [x11], 1           // Cargar el byte de 'character' en el registro w3
+
+            CBZ w3, numero_correcto   // Si w3 es 0 (cadena vacía), saltar a numero_correcto
+            
+            CMP w3,45 //Compara si no es el simbolo negativo
+            BEQ continuar_negativo //Salta para guardar el negativo
+
+            CMP w3, 10 //Compara 
+            BEQ numero_correcto //Salta para guardar el negativo
+
+            CMP w3, 48              // Comparar si el carácter es el numero 1
+            blt error_numero        // Si es menor que '1', es un error
+
+            CMP w3, 57              // Comparar si el numero 9
+            bgt error_numero        // Si es mayor que 9 es un error
+
+            continuar_negativo:
+                B bucle_numero                // Volver a leer el siguiente carácter
+            
+            error_numero:
+                print 1, errorValor, lenerrorValor
+                read 0, character, 2    // Leer dos caracteres de entrada
+                RET                     // Retornar del procedimiento
+        
+            numero_correcto:
+                RET
 
 
 
