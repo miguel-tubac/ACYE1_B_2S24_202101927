@@ -14,6 +14,8 @@
 .extern do_nologico
 .extern do_llenar
 .extern do_promedio
+.extern do_minimo
+.extern do_maximo
 
 .data
     clear:
@@ -77,6 +79,12 @@
 
     comando_promedio:
         .asciz "PROMEDIO DESDE"
+
+    comando_minimo:
+        .asciz "MINIMO DESDE"
+
+    comando_maximo:
+        .asciz "MAXIMO DESDE"
 
     number64: 
         .word 1000000000  // Definir el número de 32 bits en memoria es decir hasta 10 cifras
@@ -587,8 +595,78 @@ do_tabla:
         b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
 
     no_coincide_promedio:
-        b end 
+        b comparar_cadena_minimo 
     //************************************* FIN PROMEDIO *********************************************
+
+    //******************************** MINIMO *******************************************************
+    comparar_cadena_minimo:
+        ldr x1, =opcion         // Cargar la dirección de la cadena ingresada
+        ldr x2, =comando_minimo         // Cargar la dirección de la cadena "MINIMO"
+        mov x3, #0                   // Inicializar el índice
+        MOV w6, 0 //contador del espacio en blanco de la palabra MINIMO DESDE
+        
+    comparar_ciclo_minimo:
+        ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
+        ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "MINIMO"
+
+        cmp w4, 32      //Aca se compara con un espacio en blanco y si si entonces ya se termino de leer MINIMO
+        BEQ espacio_extra2 //Salta a la validacion
+        B continuacionn2 //Si no es un espacio en blanco continua normal 
+        espacio_extra2:
+            ADD w6, w6, 1 //incrementamos en una unidad
+            CMP w6, 2 //compara con 2 ya que solo se aceptara un espacio en blanco
+            BEQ conside_minimo //Salta para obtener el dato 
+
+        continuacionn2:
+            cmp w4, w5                   // Comparar ambos caracteres
+            bne no_coincide_minimo              // Si no coinciden, saltar a no_match
+
+            cbz w4, conside_minimo              // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
+            add x3, x3, #1               // Incrementar el índice
+            b comparar_ciclo_minimo              // Repetir el bucle
+
+    conside_minimo:
+        bl do_minimo //Salta al archivo Llenar.s en donde se leen los datos
+        b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
+
+    no_coincide_minimo:
+        b comparar_cadena_maximo
+    //************************************* FIN MINIMO *********************************************
+
+    //******************************** MAXIMO *******************************************************
+    comparar_cadena_maximo:
+        ldr x1, =opcion         // Cargar la dirección de la cadena ingresada
+        ldr x2, =comando_maximo         // Cargar la dirección de la cadena "MAXIMO"
+        mov x3, #0                   // Inicializar el índice
+        MOV w6, 0 //contador del espacio en blanco de la palabra MAXIMO DESDE
+        
+    comparar_ciclo_maximo:
+        ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
+        ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "MAXIMO"
+
+        cmp w4, 32      //Aca se compara con un espacio en blanco y si si entonces ya se termino de leer MAXIMO
+        BEQ espacio_extra3 //Salta a la validacion
+        B continuacionn3 //Si no es un espacio en blanco continua normal 
+        espacio_extra3:
+            ADD w6, w6, 1 //incrementamos en una unidad
+            CMP w6, 2 //compara con 2 ya que solo se aceptara un espacio en blanco
+            BEQ conside_maximo //Salta para obtener el dato 
+
+        continuacionn3:
+            cmp w4, w5                   // Comparar ambos caracteres
+            bne no_coincide_maximo              // Si no coinciden, saltar a no_match
+
+            cbz w4, conside_maximo              // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
+            add x3, x3, #1               // Incrementar el índice
+            b comparar_ciclo_maximo              // Repetir el bucle
+
+    conside_maximo:
+        bl do_maximo //Salta al archivo Llenar.s en donde se leen los datos
+        b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
+
+    no_coincide_maximo:
+        b end 
+    //************************************* FIN MAXIMO *********************************************
 
 
 
@@ -669,7 +747,7 @@ itoa:
     i_addExclamation:
         MOV w5, 33      // '!'
         STRB w5, [x1,-1] //Carga el simbolo ! en la posicion adecuada
-        ADD x10, x10, 1      // Incrementa el contador de dígitos
+        //ADD x10, x10, 1      // Incrementa el contador de dígitos
         B i_endConversion
 
     i_endConversion:

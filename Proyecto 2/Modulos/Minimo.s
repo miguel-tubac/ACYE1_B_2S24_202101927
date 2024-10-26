@@ -1,4 +1,4 @@
-.global do_promedio
+.global do_minimo
 
 .extern arreglo
 .extern opcion
@@ -10,13 +10,13 @@
         lenSalto = .- salto
 
     datoSuma:
-        .asciz "PROMEDIO DESDE"
+        .asciz "MINIMO DESDE"
 
     datoY:
         .asciz "HASTA"
 
     errorImport:
-        .asciz "Error en el Comando De PROMEDIO o en la letra HASTA"
+        .asciz "Error en el Comando De MINIMO o en la letra HASTA"
         lenError = .- errorImport
     
     errorGeneral:
@@ -24,7 +24,7 @@
         lenErrorGeneral = .-errorGeneral
     
     readSuccess:
-        .asciz "La operacion PROMEDIO se ha realizado Correctamente\n"
+        .asciz "La operacion MINIMO se ha realizado Correctamente\n"
         lenReadSuccess = .- readSuccess
 
     errorColum:
@@ -97,7 +97,7 @@
 
 
 
-do_promedio:
+do_minimo:
     stp x29, x30, [sp, #-16]!    // Guardar el frame pointer y link register
     mov x29, sp                  // Establecer el frame pointer
 
@@ -351,10 +351,8 @@ cargar_referencia:
 
         // Aca se validan unicamente cuando es en la misma columna  es decir:******** A1 HASTA A23 ***************
         inicio_loop1:
-        MOV x10, 0 // Aca se guardara el valor sumado
-        MOV x11, 0  //Aca se guardara el numero de elementos
-        loop_imprimir1:
-            
+            MOV x10, 0 // Aca se guardara el valor sumado
+
             MOV x16, x0      // Obtener el valor de la columna
             MOV x21, x1 //Cargamos el valor de la fila
             SUB x21, x21, 1 //Obtenemos el valor correcto de las filas
@@ -364,23 +362,42 @@ cargar_referencia:
             MUL x22, x21, x22       // Realizar la multiplicación para calcular el offset
             ADD x22, x16, x22       // Sumar el valor de la columna al offset
             LDR x9, [x20, x22, LSL #3] // Almacenar el valor en el arreglo, ajustando el offset según el tamaño
-            
-            ADD x10, x10, x9
-            
-            ADD x11, x11, 1
+
+            MOV x10, x9
             ADD x1, x1, 1   //Agregamos uno a la fila inicial
             CMP w1, w3      //Comparamos fila inicial con fila final
             BGT rd_end2     //Si fila inicial > fila final    finalizamos el programa
-            B loop_imprimir1 //Continuamos en la sigueinte iteracion
+
+            loop_imprimir1:
+                
+                MOV x16, x0      // Obtener el valor de la columna
+                MOV x21, x1 //Cargamos el valor de la fila
+                SUB x21, x21, 1 //Obtenemos el valor correcto de las filas
+
+                LDR x20, =arreglo       // Cargar la dirección del arreglo donde se almacenan los datos
+                MOV x22, 12              // Multiplicar la fila actual por 12 (supuesto tamaño de las filas)
+                MUL x22, x21, x22       // Realizar la multiplicación para calcular el offset
+                ADD x22, x16, x22       // Sumar el valor de la columna al offset
+                LDR x9, [x20, x22, LSL #3] // Almacenar el valor en el arreglo, ajustando el offset según el tamaño
+                
+                CMP w10, w9
+                BGE IF        // Si valor anterior >= valor actual saltar 
+                B esle
+                
+                IF: 
+                    MOV x10, x9 //actualizamos el valor
+                esle:
+                ADD x1, x1, 1   //Agregamos uno a la fila inicial
+                CMP w1, w3      //Comparamos fila inicial con fila final
+                BGT rd_end2     //Si fila inicial > fila final    finalizamos el programa
+                B loop_imprimir1 //Continuamos en la sigueinte iteracion
 
 
 
         // Aca se validan unicamente cuando es en la misma fila
         inicio_loop2:
-        MOV x10, 0 // Aca se guardara el valor sumado
-        MOV x11, 0  //Aca se guardara el numero de elementos
-        loop_imprimir2:
-            
+            MOV x10, 0 // Aca se guardara el valor sumado
+
             MOV x16, x0      // Obtener el valor de la columna
             MOV x21, x1 //Cargamos el valor de la fila
             SUB x21, x21, 1 //Obtenemos el valor correcto de las filas
@@ -390,31 +407,46 @@ cargar_referencia:
             MUL x22, x21, x22       // Realizar la multiplicación para calcular el offset
             ADD x22, x16, x22       // Sumar el valor de la columna al offset
             LDR x9, [x20, x22, LSL #3] // Almacenar el valor en el arreglo, ajustando el offset según el tamaño
-            
-            ADD x10, x10, x9
-            
-            ADD x11, x11, 1
+
+            MOV x10, x9
             ADD x0, x0, 1   //Agregamos uno a la columna inicial
             CMP w0, w2      //Comparamos columna inicial con columna final
             BGT rd_end2     //Si columna inicial > columna final    finalizamos el programa
-            B loop_imprimir2 //Continuamos en la sigueinte iteracion
+
+            loop_imprimir2:
+                MOV x16, x0      // Obtener el valor de la columna
+                MOV x21, x1 //Cargamos el valor de la fila
+                SUB x21, x21, 1 //Obtenemos el valor correcto de las filas
+
+                LDR x20, =arreglo       // Cargar la dirección del arreglo donde se almacenan los datos
+                MOV x22, 12              // Multiplicar la fila actual por 12 (supuesto tamaño de las filas)
+                MUL x22, x21, x22       // Realizar la multiplicación para calcular el offset
+                ADD x22, x16, x22       // Sumar el valor de la columna al offset
+                LDR x9, [x20, x22, LSL #3] // Almacenar el valor en el arreglo, ajustando el offset según el tamaño
+                
+                CMP w10, w9
+                BGE IF2        // Si valor anterior >= valor actual saltar 
+                B esle2
+                
+                IF2: 
+                    MOV x10, x9 //actualizamos el valor
+                esle2:
+                ADD x0, x0, 1   //Agregamos uno a la columna inicial
+                CMP w0, w2      //Comparamos columna inicial con columna final
+                BGT rd_end2     //Si columna inicial > columna final    finalizamos el programa
+                B loop_imprimir2 //Continuamos en la sigueinte iteracion
 
 
 
 
     rd_end2:
         LDR x5, =retorno //Carga la direccion de la varible de retorno
-        SDIV w10, w10, w11 //Se realiza el calculo del primedio
         STR x10, [x5] //Se carga el valor numerico a la variable de retorno
 
         print 1, salto, lenSalto // Imprimir un salto de línea
         print 1, readSuccess, lenReadSuccess // Imprimir el mensaje de éxito en la lectura
         read 0, character, 2    // Leer dos caracteres de entrada
         RET                     // Retornar del procedimiento
-
-
-
-
 
 
 
@@ -460,6 +492,10 @@ atoi:
 
         a_c_end:
             RET                       // Retornar el valor convertido (almacenado en w9)
+
+
+
+
 
 
 
@@ -618,6 +654,7 @@ reset_variables:
 
     end_clear_memory:
         RET                        // Regresar de la función
+
 
 
 
