@@ -16,6 +16,7 @@
 .extern do_promedio
 .extern do_minimo
 .extern do_maximo
+.extern do_exportar
 
 .data
     clear:
@@ -85,6 +86,9 @@
 
     comando_maximo:
         .asciz "MAXIMO DESDE"
+
+    comando_exportar:
+        .asciz "EXPORTAR"
 
     number64: 
         .word 1000000000  // Definir el número de 32 bits en memoria es decir hasta 10 cifras
@@ -665,8 +669,36 @@ do_tabla:
         b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
 
     no_coincide_maximo:
-        b end 
+        b comparar_cadena_exportar 
     //************************************* FIN MAXIMO *********************************************
+
+    //******************************** EXPORTAR *******************************************************
+    comparar_cadena_exportar:
+        ldr x1, =opcion         // Cargar la dirección de la cadena ingresada
+        ldr x2, =comando_exportar         // Cargar la dirección de la cadena "EXPORTAR"
+        mov x3, #0                   // Inicializar el índice
+        
+    comparar_ciclo_exportar:
+        ldrb w4, [x1, x3]            // Cargar un carácter de la cadena ingresada
+        ldrb w5, [x2, x3]            // Cargar el carácter correspondiente de "EXPORTAR"
+
+        cmp w4, 32      //Aca se compara con un espacio en blanco y si si entonces ya se termino de leer EXPORTAR
+        BEQ conside_exportar //Salta a la validacion
+
+        cmp w4, w5                   // Comparar ambos caracteres
+        bne no_coincide_exportar              // Si no coinciden, saltar a no_match
+
+        cbz w4, conside_exportar              // Si llegamos al final de ambas cadenas (carácter nulo), son iguales
+        add x3, x3, #1               // Incrementar el índice
+        b comparar_ciclo_exportar              // Repetir el bucle
+
+    conside_exportar:
+        bl do_exportar //Salta al archivo Exportar.s en donde se leen los datos
+        b mostrarTabla //Retornamos e implimimos la tabla con los datos actualizados
+
+    no_coincide_exportar:
+        b end 
+    //************************************* FIN EXPORTAR *********************************************
 
 
 
