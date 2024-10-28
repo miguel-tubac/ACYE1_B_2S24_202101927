@@ -66,15 +66,15 @@
         lenEncabezado2 = .-encabezado2
     
     fila_inicio:
-        .ascii "<tr>\n"
+        .ascii "\t\t<tr>\n"
         lenfila_inicio = .- fila_inicio
 
     fila_final:
-        .ascii "</tr>\n"
+        .ascii "\t\t</tr>\n"
         lenfila_final = .- fila_final
 
     encabezado_inicio:
-        .ascii "<th>"
+        .ascii "\t\t\t<th>"
         lenencabezado_inicio = .- encabezado_inicio
 
     encabezado_final:
@@ -82,7 +82,7 @@
         lenencabezado_final = .- encabezado_final
 
     dato_normal_inicio:
-        .ascii "<td>"
+        .ascii "\t\t\t<td>"
         lendato_normal_inicio = . -dato_normal_inicio
 
     dato_normal_final:
@@ -95,7 +95,13 @@
         .ascii "</html>\n"
         lenfinalHtml = .-finalHtml
 
-    
+    dato_encabezado:
+        .asciz "Encabezado para columna "
+        lendato_encabezado = . -dato_encabezado
+
+    dospuntos:
+        .asciz " : "
+        lendospuntos = .- dospuntos
     
 
 
@@ -132,6 +138,9 @@
 
     fileDescriptor:
         .space 8
+
+    buffer:
+        .zero 1024
 
 
 .text 
@@ -386,7 +395,7 @@ generarReporte:
 
     agregarTexto x20, encabezado2, lenEncabezado2
 
-    //BL cargar_referencia
+    BL cargar_referencia //Se cargan los valores dentro del html
 
     agregarTexto x20, finalHtml, lenfinalHtml
 
@@ -433,78 +442,46 @@ closeFile:
 
 
 
-/*//Aca se evalua la sigueinte estructura: GUARDAR B15 EN A23
+//Aca se evalua la sigueinte estructura: GUARDAR B15 EN A23
 cargar_referencia:
-    LDR x10, =num               // Cargar la dirección de 'num' en el registro x10
+    //LDR x10, =num               // Cargar la dirección de 'num' en el registro x10
     LDR x11,  =numeroCelda_1    // Cargar la dirección de 'numeroCelda_1' en x11
+    LDR x11, [x11]
     LDR x21, =num2                  // Inicializar el contador de filas en 0
     MOV x15, 0                   // Inicializar el contador de columnas en 0
     LDR x17, =numeroCelda_2
+    LDR x17, [x17]
     LDR x23, =num3
     LDR x24, =num4
     LDR x25, =num5
     LDR x26, =num6
 
-    obtener_direccion:
-        LDRB w3, [x11], 1           // Cargar el byte de 'character' en el registro w3
+    agregarTexto x20, fila_inicio, lenfila_inicio
+    ADD x17, x17, 65 //Cargamos el valor inicial de la columna
+    loop_obtener_encabezados:
+            print 1, dato_encabezado, lendato_encabezado //Impimimos el mensaje de encabezado
+            LDR x10, =num //Cargamos la referencia
+            STR x17, [x10] //Cargamos el valor del ascii
+            print 1, num, 2 //Implimimos la columna
+            print 1, dospuntos, lendospuntos //Imprimos los dos puntos
+            read 0, buffer, 100 //Lee los caracteres ingresados
 
-        CMP w3, 65              // Comparar si el carácter es la letra A
-        blt es_numero        // Si es menor que 'A', es un numero
+            agregarTexto x20, encabezado_inicio, lenencabezado_inicio
+            agregarTexto x20, buffer, 10        //Ay que validar cuantos datos se ingresa por que si no sale error 
+            agregarTexto x20, encabezado_final, lenencabezado_final
 
-        CMP w3, 75              // Comparar si el carácter es la letra K
-        bgt error_direccion       // Si es mayor que 'K', es inválido'
+            ADD x17, x17, 1 //Incrementamos el valor de la columna
 
-        SUB w15, w3, 65         //Como vamos a trabajar con las Columnas como letras A=65, por eso se le resta a la letra que venga
-        B obtener_columna_direccion    //Continua para obtener la fila de referencia  
+            SUB x11, x11, 1 //Decrementamos el valor de veces
+            CMP x11, 0 //Comparamos con cero
+            BEQ agregar_datos_filas //finalizamos si llegamos al final
+            B loop_obtener_encabezados //Si no repetimos
 
-    error_direccion:
-        print 1, errorColum, lenerrorColum
-        read 0, character, 2    // Leer dos caracteres de entrada es el enter
-        RET   
+    agregar_datos_filas:
+        agregarTexto x20, fila_final, lenfila_final //Agregamos la etiqueta de fial de html
 
-    es_numero:
-        LDRB w3, [x11], -1           // Cargar el byte de 'character' en el registro w3
-        bucle_numero:
-            LDRB w3, [x11], 1           // Cargar el byte de 'character' en el registro w3
 
-            CBZ w3, convertir_numero   // Si w3 es 0 (cadena vacía), saltar a convertir_numero
-
-            CMP w3, 42 //Este es el simbolo de '*'
-            BEQ obtener_retorno1 //Salta para obtener el valor de retorno
-            
-            CMP w3,45 //Compara si no es el simbolo negativo
-            BEQ continuar_negativo //Salta para guardar el negativo
-
-            CMP w3, 48              // Comparar si el carácter es el numero 1
-            blt error_numero        // Si es menor que '1', es un error
-
-            CMP w3, 57              // Comparar si el numero 9
-            bgt error_numero        // Si es mayor que 9 es un error
-
-            continuar_negativo:
-                STRB w3, [x24], 1       // Almacenar el carácter leído en la dirección de 'num4' y avanzar el puntero
-                B bucle_numero                // Volver a leer el siguiente carácter
-
-    error_numero:
-        print 1, errorNumero, lenerrorNumero
-        read 0, character, 2    // Leer dos caracteres de entrada es el enter
-        RET
-
-    obtener_columna_direccion:
-        LDRB w3, [x11], 1
-
-        CBZ w3, obtener_numero //Cuando llege al final de la palabra de direccion A12 saltar a obtener el numero
-
-        CMP w3, 48              // Comparar si el carácter es el numero 1
-        blt error_direccion        // Si es menor que '1', es un error
-
-        CMP w3, 57              // Comparar si el numero 9
-        bgt error_direccion        // Si es mayor que 9 es un error
-
-        STRB w3, [x21], 1      //Carga el numero de fila a la variable num2 esta en texto
-        B obtener_columna_direccion         // Volver a leer el siguiente carácter de las filas
-
-    obtener_numero:
+    /*obtener_numero:
         LDR x5, =num2            // Cargar la dirección de 'num' en x5
         LDR x8, =num2            // Cargar la dirección de 'num' en x8
 
@@ -514,7 +491,7 @@ cargar_referencia:
         MOV x21,x9          //Aca carga el valor de las filas 
         SUB x21,x21,1
 
-        MOV x16, x15
+        MOV x16, x15        //Cargamos el valor de las columnas
 
         LDR x20, =arreglo       // Cargar la dirección del arreglo donde se almacenan los datos
         MOV x22, 12              // Multiplicar la fila actual por 12 (supuesto tamaño de las filas)
@@ -522,174 +499,9 @@ cargar_referencia:
         ADD x22, x16, x22       // Sumar el valor de la columna al offset
         LDR x5, [x20, x22, LSL #3] // Cargar el valor en num, ajustando el offset según el tamaño
         STR x5, [x10] //carga el valor numerico a num
-        B obtener_columna_objetivo
+        B obtener_columna_objetivo*/
 
-    obtener_retorno1:
-        MOV x3, 0 //Reiniciamos el valor de x3
-        LDR x3, =retorno//cargamos la direccion de la variable global retorno
-        LDR x3, [x3] //Cargamos el valor numerico
-        STR x3, [x24]//Cargamos el valor a num
-        B obtener_columna_objetivo
-
-    convertir_numero:
-        LDR x5, =num4            // Cargar la dirección de 'num4' en x5
-        LDR x8, =num4            // Cargar la dirección de 'num4' en x8
-
-        STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
-        BL atoi                 // Llamar a la función 'atoi' para convertir la cadena numérica
-        LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
-
-        STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
-        BL reset_num4
-        LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
-
-        LDR x5, =num4
-        STR x9, [x5] //Carga el valor numerico a num4
-
-
-
-
-    //Aca se obtine la direccion de la celda en donde se almacenara el numero anteriomente guardado en num:
-    obtener_columna_objetivo:
-        LDRB w3, [x17], 1
-
-        CMP w3, 65              // Comparar si el carácter es la letra A
-        blt numero_objetivo        // Si es menor que 'A', es un numero
-
-        CMP w3, 75              // Comparar si el carácter es la letra K
-        bgt error_columna_objetivo       // Si es mayor que 'K', es inválido' 
-
-        SUB w15, w3, 65         //Como vamos a trabajar con las Columnas como letras A=65, por eso se le resta a la letra que venga
-        B calcular_fila_objetivo         // Volver a leer el siguiente carácter de las filas
-
-
-    error_columna_objetivo:
-        print 1, errorGeneral, lenErrorGeneral //Imprime el error de fila o columna
-        read 0, character, 2    // Leer dos caracteres de entrada
-        RET
-
-    numero_objetivo:
-        LDRB w3, [x17], -1           // Retrocede un caracter hacia atras
-        bucle_numero_objetivo:
-            LDRB w3, [x17], 1           // Cargar el byte de 'character' en el registro w3
-
-            CBZ w3, convertir_numero2   // Si w3 es 0 (cadena vacía), saltar a convertir_numero2
-
-            CMP w3, 42 //Este es el simbolo de '*'
-            BEQ obtener_retorno2 //Salta para obtener el valor de retorno
-            
-            CMP w3,45 //Compara si no es el simbolo negativo
-            BEQ continuar_negativo2 //Salta para guardar el negativo
-
-            CMP w3, 48              // Comparar si el carácter es el numero 1
-            blt error_columna_objetivo        // Si es menor que '1', es un error
-
-            CMP w3, 57              // Comparar si el numero 9
-            bgt error_columna_objetivo        // Si es mayor que 9 es un error
-
-            continuar_negativo2:
-                STRB w3, [x25], 1       // Almacenar el carácter leído en la dirección de 'num5' y avanzar el puntero
-                B bucle_numero_objetivo                // Volver a leer el siguiente carácter
     
-    calcular_fila_objetivo: 
-        LDRB w3, [x17], #1   // Cargar el byte de 'character' en el registro w3, avanzar x17 en 1 byte
-
-        CBZ w3, obtener_numero_objetivo    // Si w3 es 0 (cadena vacía), saltar a 'obtener_numero_objetivo'
-
-        CMP w3, 48              // Valida si el el dato es numero 0
-        blt error_columna_objetivo        // Compara si es menor es un error
-
-        CMP w3, 57              // Compara si el numero es 9
-        bgt error_columna_objetivo    // Si el numero es mayor es un error
-
-        STRB w3, [x23], 1 //Carga el valor a num3
-        B calcular_fila_objetivo      // Repite el ciclo hasta encontrar un valor nulo 0
-
-    obtener_numero_objetivo:
-        LDR x5, =num3            // Cargar la dirección de 'num' en x5
-        LDR x8, =num3            // Cargar la dirección de 'num' en x8
-
-        STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
-        BL atoi                 // Llamar a la función 'atoi' para convertir la cadena numérica
-        LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
-        MOV x21,x9          //Aca carga el valor de las filas 
-        SUB x21,x21,1
-
-        MOV x16, x15
-
-        LDR x20, =arreglo       // Cargar la dirección del arreglo donde se almacenan los datos
-        MOV x22, 12              // Multiplicar la fila actual por 12 (supuesto tamaño de las filas)
-        MUL x22, x21, x22       // Realizar la multiplicación para calcular el offset
-        ADD x22, x16, x22       // Sumar el valor de la columna al offset
-        LDR x5, [x20, x22, LSL #3] // Cargar el valor en num, ajustando el offset según el tamaño
-        STR x5, [x26] //carga el valor numerico a num6
-        B sumar_variables
-
-    obtener_retorno2:
-        MOV x3, 0 //Reiniciamos el valor de x3
-        LDR x3, =retorno//cargamos la direccion de la variable global retorno
-        LDR x3, [x3] //Cargamos el valor numerico
-        STR x3, [x25]//Cargamos el valor a num
-        B sumar_variables
-    
-    convertir_numero2:
-        LDR x5, =num5            // Cargar la dirección de 'num5' en x5
-        LDR x8, =num5            // Cargar la dirección de 'num5' en x8
-
-        STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
-        BL atoi                 // Llamar a la función 'atoi' para convertir la cadena numérica
-        LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
-
-        STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
-        BL reset_num5
-        LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
-
-        LDR x5, =num5
-        STR x9, [x5] //Carga el valor numerico a num5
-
-
-    sumar_variables:
-        LDR x5, =retorno //Carga la direccion de la varible de retorno
-        LDR x0, =num //cargamos el primer numero
-        LDR x0, [x0]//cargamos el valor
-        LDR x1, =num4 //cargamos el segundo numero
-        LDR x1, [x1]//cargamos el valor
-        LDR x2, =num5 //cargamos el tercer numero
-        LDR x2, [x2]//cargamos el valor
-        LDR x3, =num6 //cargamos el cuarto numero
-        LDR x3, [x3]//cargamos el valor
-
-        MOV x4, 0 //Inicializamos la variable que guardara la suma temporal
-
-        CMP x0, 0 //Comparamos num con el valor de 0
-        BNE IF // SI num != 0 saltar a IF
-        B ELSE //Si num == 0 saltar a ELSE
-
-        IF:
-            CMP x3, 0 //Comparamos num6 con el valor de cero
-            BNE IF_ANIDADO //Si num6 != 0 saltar a IF_ANIDADO
-            B ELSE_ANIDADO //Si num6 == 0 saltar a ELSE_ANIDADO
-
-            IF_ANIDADO:
-                SUB x4, x0, x3 //Se realiza la resta de num - num6
-                B salida //Saltamoa a cargar el numero
-            ELSE_ANIDADO:
-                SUB x4, x0, x2 //Se realiza la resta de num - num5
-                B salida //Saltamoa a cargar el numero
-        ELSE:
-            CMP x3, 0 //Comparamos num6 con el valor de cero
-            BNE IF_ANIDADO2 //Si num6 != 0 saltar a IF_ANIDADO2
-            B ELSE_ANIDADO2 //Si num6 == 0 saltar a ELSE_ANIDADO2
-
-            IF_ANIDADO2:
-                SUB x4, x1, x3 //Se realiza la resta de num4 - num6
-                B salida //Saltamoa a cargar el numero
-            ELSE_ANIDADO2:
-                SUB x4, x1, x2 //Se realiza la resta de num4 - num5
-                B salida //Saltamoa a cargar el numero
-
-        salida:
-            STR x4, [x5] //Se carga el valor numerico a la variable de retorno
 
     rd_end2:
         print 1, salto, lenSalto // Imprimir un salto de línea
