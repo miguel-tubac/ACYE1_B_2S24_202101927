@@ -110,10 +110,10 @@
         .space 10
 
     numeroCelda_1:
-        .space 10
+        .space 100
 
     numeroCelda_2:
-        .space 10
+        .space 100
 
     nombreArchivo:
         .space 100
@@ -141,6 +141,9 @@
 
     buffer:
         .zero 1024
+    
+    boolean:
+        .zero 1
 
 
 .text 
@@ -178,10 +181,19 @@ do_exportar:
 
     BL proc_import//Aca se captura los datos necesario y se guardan 
 
-    BL validar_valores //Aca se validan si los valores sin correctos
+    LDR x21, =boolean
+    LDR x21, [x21] //Obtenemos el valor numerico
+    CMP x21, 1 //Comparamos con el valor 1
+    BEQ  salir
+    BL validar_valores //Si no es igual es por que no es un error y prosigue en el proceso
 
+    LDR x21, =boolean
+    LDR x21, [x21] //Obtenemos el valor numerico
+    CMP x21, 1 //Comparamos con el valor 1
+    BEQ salir
     BL generarReporte //Aca se crea el archivo html
 
+    salir:
     ldp x29, x30, [sp], #16      // Restaurar el frame pointer y link register
     ret                          // Regresar al punto donde se llamó 
 
@@ -197,6 +209,7 @@ proc_import:
     LDR x0, =datoSuma //Aca se encuantra el comando EXPORTAR
     LDR x1, =opcion //Aca se carga un bufer de 50 bytes
 
+    LDR x21, =boolean
     imp_loop:
         LDRB w2, [x0], 1 //Se carga el primer caracter de EXPORTAR
         LDRB w3, [x1], 1 //Se carga un caracter del bufercomand
@@ -210,6 +223,8 @@ proc_import:
 
         imp_error: //Aca se imprime un error por si el comando EXPORTAR no esta bien escrito
             print 1, errorImport, lenError //Imprime el mensaje de error
+            MOV x22, 1
+            STR x22, [x21] //Cargamos el valor a boolean
             B end_proc_import //Finaliza la funcion de reconocer el comando GUARDAR
 
     imp_filename: //Esta etiqueta obtiene el nombre de la etiqueta o el valor numerico
@@ -306,6 +321,9 @@ validar_valores:
     LDR x11,  =numeroCelda_1    
     LDR x17, =numeroCelda_2
 
+    LDR x21, =boolean
+    MOV x22, 0
+    STR x22, [x21]//Reiniciamos la variable booleana
     valor_numerico:
         LDR x5, =numeroCelda_1            
         LDR x8, =numeroCelda_1            
@@ -329,6 +347,8 @@ validar_valores:
         B celdas_dimencion
     
     error_dimencion:
+        MOV x22, 1
+        STR x22, [x21] //Cargamos el valor a boolean
         print 1, errorTamano, lenerrorTamano
         read 0, character, 2    // Leer dos caracteres de entrada es el enter
         RET
@@ -353,13 +373,15 @@ validar_valores:
         B validar_cantidad_columnas    //Continua para obtener la fila de referencia 
 
     error_columna:
+        MOV x22, 1
+        STR x22, [x21] //Cargamos el valor a boolean
         print 1, errorColumnas, lenerrorColumnas
         read 0, character, 2    // Leer dos caracteres de entrada es el enter
         RET
 
     validar_cantidad_columnas:
         ADD w15, w15, 1 //Incrementamos en una unidad el valor numerico de la letra
-        MOV w3, 11 //Este es el total de columnas
+        MOV w3, 12 //Este es el total de columnas
         SUB w15, w3, w15 //Restamos el valor de la letra al total de las columnas
 
         LDR x5, =numeroCelda_1 
@@ -370,6 +392,8 @@ validar_valores:
         B salida_validacion //Si no es que todo esta bien
 
     error_valor:
+        MOV x22, 1
+        STR x22, [x21] //Cargamos el valor a boolean
         print 1, error_datos, lenerror_datos
         read 0, character, 2    // Leer dos caracteres de entrada es el enter
         RET
@@ -425,8 +449,8 @@ abrirArchivo:
         RET
 
     vac_end:
-        print 1, recet, lenrecet
-        read 0, character, 2    // Leer dos caracteres de entrada es el enter
+        //print 1, recet, lenrecet //Este es el mensaje que todo salio bien al abrir el archivo
+        //read 0, character, 2    // Leer dos caracteres de entrada es el enter
         RET
 
 
@@ -444,17 +468,11 @@ closeFile:
 
 //Aca se evalua la sigueinte estructura: GUARDAR B15 EN A23
 cargar_referencia:
-    //LDR x10, =num               // Cargar la dirección de 'num' en el registro x10
     LDR x11,  =numeroCelda_1    // Cargar la dirección de 'numeroCelda_1' en x11
     LDR x11, [x11]
-    LDR x21, =num2                  // Inicializar el contador de filas en 0
-    MOV x15, 0                   // Inicializar el contador de columnas en 0
     LDR x17, =numeroCelda_2
     LDR x17, [x17]
-    LDR x23, =num3
-    LDR x24, =num4
-    LDR x25, =num5
-    LDR x26, =num6
+    
 
     agregarTexto x20, fila_inicio, lenfila_inicio
     ADD x17, x17, 65 //Cargamos el valor inicial de la columna
@@ -467,40 +485,63 @@ cargar_referencia:
             read 0, buffer, 100 //Lee los caracteres ingresados
 
             agregarTexto x20, encabezado_inicio, lenencabezado_inicio
-            agregarTexto x20, buffer, 10        //Ay que validar cuantos datos se ingresa por que si no sale error 
+            agregarTexto x20, buffer, 1024        //Ay que validar cuantos datos se ingresa por que si no sale error 
             agregarTexto x20, encabezado_final, lenencabezado_final
 
             ADD x17, x17, 1 //Incrementamos el valor de la columna
 
             SUB x11, x11, 1 //Decrementamos el valor de veces
             CMP x11, 0 //Comparamos con cero
-            BEQ agregar_datos_filas //finalizamos si llegamos al final
+            BEQ finnalizar_encabezados //finalizamos si llegamos al final
             B loop_obtener_encabezados //Si no repetimos
 
-    agregar_datos_filas:
+    finnalizar_encabezados:
         agregarTexto x20, fila_final, lenfila_final //Agregamos la etiqueta de fial de html
 
+    MOV x9, 0 //Inicializamos el valor de las filas
+    agregar_datos_filas:
+        LDR x11,  =numeroCelda_1    
+        LDR x11, [x11]  //Cargamos las veces que se repitira
+        LDR x17, =numeroCelda_2
+        LDR x17, [x17]  //Cargamos el vlor de la columna
+        agregarTexto x20, fila_inicio, lenfila_inicio //Agregamos el <tr>
+        bucle_filas:
 
-    /*obtener_numero:
-        LDR x5, =num2            // Cargar la dirección de 'num' en x5
-        LDR x8, =num2            // Cargar la dirección de 'num' en x8
+            MOV x21,x9          //Aca carga el valor de las filas 
+            //SUB x21,x21,1
 
-        STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
-        BL atoi                 // Llamar a la función 'atoi' para convertir la cadena numérica
-        LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
-        MOV x21,x9          //Aca carga el valor de las filas 
-        SUB x21,x21,1
+            MOV x16, x17        //Cargamos el valor de las columnas
 
-        MOV x16, x15        //Cargamos el valor de las columnas
+            LDR x23, =arreglo       // Cargar la dirección del arreglo donde se almacenan los datos
+            MOV x22, 12              // Multiplicar la fila actual por 12 (supuesto tamaño de las filas)
+            MUL x22, x21, x22       // Realizar la multiplicación para calcular el offset
+            ADD x22, x16, x22       // Sumar el valor de la columna al offset
+            LDR x5, [x23, x22, LSL #3] // Cargar el valor en num, ajustando el offset según el tamaño
 
-        LDR x20, =arreglo       // Cargar la dirección del arreglo donde se almacenan los datos
-        MOV x22, 12              // Multiplicar la fila actual por 12 (supuesto tamaño de las filas)
-        MUL x22, x21, x22       // Realizar la multiplicación para calcular el offset
-        ADD x22, x16, x22       // Sumar el valor de la columna al offset
-        LDR x5, [x20, x22, LSL #3] // Cargar el valor en num, ajustando el offset según el tamaño
-        STR x5, [x10] //carga el valor numerico a num
-        B obtener_columna_objetivo*/
+            // Convertimos el valor nuemrico a ascii
+            MOV x0, x5   // Mover el valor en x5 a x0 (argumento para itoa)
+            LDR x1, =num5  // Cargar la dirección de 'num' en x1
+            STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+            BL itoa       // Llamar a la función itoa para convertir a cadena
+            LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
 
+            agregarTexto x20, dato_normal_inicio, lendato_normal_inicio //Aregamos las etiquetas <td>
+            agregarTexto x20, num5, x10         //Agregamos el dato numerico 
+            agregarTexto x20, dato_normal_final, lendato_normal_final //Aregamos las etiquetas </td>
+
+            ADD x17, x17, 1 //Incrementamos el valor de la columna
+            
+            SUB x11, x11, 1 //Decrementamos el valor de veces
+            CMP x11, 0 //Comparamos con cero
+            BEQ agregar_etiqueta_fin
+            B bucle_filas
+
+        agregar_etiqueta_fin:
+            ADD x9, x9, 1 //Incrementamos en uno las filas
+            agregarTexto x20, fila_final, lenfila_final //Agregamos el </tr>
+            CMP w9, 23 //Comparamos si ya es la ultimia fila
+            BEQ rd_end2
+            B agregar_datos_filas
     
 
     rd_end2:
@@ -511,6 +552,66 @@ cargar_referencia:
 
 
 
+
+
+itoa:
+    // params: x0 => number (el número a convertir), x1 => buffer address (la dirección del buffer donde se almacenará la cadena)
+    MOV x10, 0      // Inicializa el contador de dígitos a 0
+    MOV x12, 0      // Inicializa la bandera para indicar si hay un signo negativo a 0
+    MOV w2, 10000   // Establece la base en 10^4 (para manejar hasta 5 dígitos)
+    CMP w0, 0       // Compara el número a convertir con 0
+    BGT i_convertirAscii2  // Si el número es positivo, salta a la conversión ASCII
+    CBZ w0, i_zero2  // Si el número es 0, salta al manejo de 0
+
+    B i_negative2    // Si el número es negativo, salta al manejo de número negativo
+
+    i_zero2:
+        ADD x10, x10, 1     // Incrementa el contador de dígitos en 1
+        MOV w5, 48          // Carga el valor ASCII de '0' en w5
+        STRB w5, [x1], 1    // Almacena el carácter '0' en el buffer
+        B i_endConversion2   // Salta al final de la conversión
+
+    i_negative2:
+        MOV x12, 1          // Establece la bandera de signo negativo en 1
+        MOV w5, 45          // Carga el valor ASCII de '-' en w5
+        STRB w5, [x1], 1    // Almacena el carácter '-' en el buffer
+        NEG w0, w0          // Convierte el número a su valor positivo
+
+    i_convertirAscii2:
+        CBZ w2, i_endConversion2  // Si la base es 0, termina la conversión
+        UDIV w3, w0, w2          // Divide el número por la base actual
+        CBZ w3, i_reduceBase2     // Si el cociente es 0, reduce la base y continúa
+
+        MOV w5, w3           // Mueve el resultado de la división a w5
+        ADD w5, w5, 48       // Convierte el dígito a su valor ASCII
+        STRB w5, [x1], 1     // Almacena el dígito en el buffer
+        ADD x10, x10, 1      // Incrementa el contador de dígitos
+
+        MUL w3, w3, w2       // Multiplica el cociente por la base para restar el dígito
+        SUB w0, w0, w3       // Resta el valor del dígito del número original
+
+        CMP w2, 1            // Compara la base con 1
+        BLE i_endConversion2   // Si la base es 1 o menor, termina la conversión
+
+    i_reduceBase2:
+        MOV w6, 10           // Establece el divisor de base en 10
+        UDIV w2, w2, w6      // Reduce la base dividiéndola entre 10
+
+        CBNZ x10, i_addZero2  // Si el contador de dígitos no es 0, agrega un cero
+        B i_convertirAscii2   // Vuelve a convertir el siguiente dígito
+
+    i_addZero2:
+        CBNZ w3, i_convertirAscii2 // Si el valor no es 0, convierte el siguiente dígito
+        ADD x10, x10, 1      // Incrementa el contador de dígitos
+        MOV w5, 48           // Carga el valor ASCII de '0' en w5
+        STRB w5, [x1], 1     // Almacena el carácter '0' en el buffer
+        B i_convertirAscii2   // Continúa con la conversión de ASCII
+
+    i_endConversion2:
+        ADD x10, x10, x12    // Agrega el signo negativo al contador de dígitos si es necesario
+        //print 1, num6, x10    // Imprime el número convertido (usando algún mecanismo de impresión)
+
+        RET                  // Retorna de la función
 
 
 
@@ -564,7 +665,7 @@ atoi:
 reset_numeroCelda_1:
     // Reiniciar 'num' (10 bytes)
     LDR x0, =numeroCelda_1               // Dirección base de 'num'
-    MOV x1, #10                // Tamaño en bytes
+    MOV x1, #100                // Tamaño en bytes
 
     STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
     BL clear_memory            // Llamada a la función para establecer a cero
@@ -575,7 +676,7 @@ reset_numeroCelda_1:
 reset_numeroCelda_2:
     // Reiniciar 'num' (10 bytes)
     LDR x0, =numeroCelda_2               // Dirección base de 'num'
-    MOV x1, #10                // Tamaño en bytes
+    MOV x1, #100                // Tamaño en bytes
 
     STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
     BL clear_memory            // Llamada a la función para establecer a cero
@@ -607,6 +708,10 @@ reset_num5:
 
 
 reset_variables:
+    LDR x21, =boolean
+    MOV x22, 0
+    STR x22, [x21]//Reiniciamos la variable booleana
+
     // Reiniciar 'num' (10 bytes)
     LDR x0, =num               // Dirección base de 'num'
     MOV x1, #10                // Tamaño en bytes
@@ -682,6 +787,14 @@ reset_variables:
     // Reiniciar 'num6' (10 bytes)
     LDR x0, =nombreArchivo              // Dirección base
     MOV x1, #100                // Tamaño en bytes
+
+    STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
+    BL clear_memory            // Llamada a la función para establecer a cero
+    LDP x29, x30, [SP], 16  // Restaurar los registros x29 y x30 desde la pila
+
+    // Reiniciar 'num6' (10 bytes)
+    LDR x0, =buffer              // Dirección base
+    MOV x1, #1024                // Tamaño en bytes
 
     STP x29, x30, [SP, -16]! // Guardar los registros x29 y x30 en la pila
     BL clear_memory            // Llamada a la función para establecer a cero
